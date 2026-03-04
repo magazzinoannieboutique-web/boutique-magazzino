@@ -26,7 +26,7 @@ body {
 
 /* ===== LAYOUT ===== */
 .container {
-  margin-top:30px !important;
+  margin-top: 30px !important;
   max-width: 1100px;
   margin: 0 auto;
   padding: 0 24px;
@@ -57,8 +57,8 @@ header {
 }
 
 .logo-dot {
-  width: 20px;
-  height: 20px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   background: var(--accent);
   display: inline-block;
@@ -271,6 +271,36 @@ tr:hover td { background: var(--bg); }
 
 /* ===== FILTRI ===== */
 .filtri { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+
+/* ===== SMART SELECT ===== */
+.smart-select { position: relative; }
+
+.ss-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0; right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  z-index: 200;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.ss-option {
+  padding: 9px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.ss-option:hover    { background: var(--bg); }
+.ss-option:first-child { border-radius: 8px 8px 0 0; }
+.ss-option:last-child  { border-radius: 0 0 8px 8px; }
+
+.ss-add   { color: var(--accent); border-top: 1px solid var(--border); }
+.ss-empty { padding: 9px 12px; font-size: 13px; color: var(--text-muted); }
 
 /* ===== RESPONSIVE ===== */
 @media (max-width: 600px) {

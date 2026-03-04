@@ -100,11 +100,17 @@
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:0 16px;">
           <div class="form-group">
             <label class="form-label">Categoria</label>
-            <input class="form-input" id="pCategoria" placeholder="es. Vestito, Top, Gonna">
+            <div class="smart-select" id="ssCategoria">
+              <input class="form-input" id="pCategoria" placeholder="Cerca o aggiungi..." autocomplete="off" oninput="filtraSmartSelect('ssCategoria','pCategoria')" onfocus="apriSmartSelect('ssCategoria','pCategoria')" onblur="chiudiSmartSelect('ssCategoria')">
+              <div class="ss-dropdown" id="ssCategoria-dropdown"></div>
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label">Brand</label>
-            <input class="form-input" id="pBrand" placeholder="es. Zara">
+            <div class="smart-select" id="ssBrand">
+              <input class="form-input" id="pBrand" placeholder="Cerca o aggiungi..." autocomplete="off" oninput="filtraSmartSelect('ssBrand','pBrand')" onfocus="apriSmartSelect('ssBrand','pBrand')" onblur="chiudiSmartSelect('ssBrand')">
+              <div class="ss-dropdown" id="ssBrand-dropdown"></div>
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label">Taglia</label>
@@ -203,6 +209,9 @@
 <script src="config.js"></script>
 <script src="app.js"></script>
 <script>
+  // ============================================
+  // CLOUDINARY
+  // ============================================
   function apriCloudinary() {
     const widget = cloudinary.createUploadWidget({
       cloudName:    CONFIG.CLOUDINARY_CLOUD_NAME,
@@ -223,6 +232,77 @@
       }
     });
     widget.open();
+  }
+
+  // ============================================
+  // SMART SELECT — dropdown con ricerca + aggiungi
+  // ============================================
+  let ssData = { ssCategoria: [], ssBrand: [] };
+
+  async function inizializzaSmartSelects() {
+    const data = await fetch(CONFIG.APPS_SCRIPT_URL + '?action=getOpzioni').then(r => r.json());
+    ssData.ssCategoria = data.categorie || [];
+    ssData.ssBrand     = data.brand     || [];
+  }
+  inizializzaSmartSelects();
+
+  function apriSmartSelect(ssId, inputId) {
+    const val = document.getElementById(inputId).value.toLowerCase();
+    renderDropdown(ssId, inputId, val);
+  }
+
+  function filtraSmartSelect(ssId, inputId) {
+    const val = document.getElementById(inputId).value.toLowerCase();
+    renderDropdown(ssId, inputId, val);
+  }
+
+  function renderDropdown(ssId, inputId, filtro) {
+    const dropdown = document.getElementById(ssId + '-dropdown');
+    const lista    = ssId === 'ssCategoria' ? ssData.ssCategoria : ssData.ssBrand;
+    const filtrata = lista.filter(v => v.toLowerCase().includes(filtro));
+
+    let html = filtrata.map(v => `
+      <div class="ss-option" onmousedown="selezionaOpzione('${ssId}','${inputId}','${v}')">${v}</div>
+    `).join('');
+
+    // Mostra "Aggiungi" solo se il testo non esiste già
+    const testoCorrente = document.getElementById(inputId).value.trim();
+    if (testoCorrente && !lista.some(v => v.toLowerCase() === testoCorrente.toLowerCase())) {
+      html += `<div class="ss-option ss-add" onmousedown="aggiungiOpzione('${ssId}','${inputId}','${testoCorrente}')">
+        ➕ Aggiungi "<strong>${testoCorrente}</strong>"
+      </div>`;
+    }
+
+    dropdown.innerHTML = html || '<div class="ss-empty">Nessun risultato</div>';
+    dropdown.style.display = 'block';
+  }
+
+  function selezionaOpzione(ssId, inputId, valore) {
+    document.getElementById(inputId).value = valore;
+    document.getElementById(ssId + '-dropdown').style.display = 'none';
+  }
+
+  async function aggiungiOpzione(ssId, inputId, valore) {
+    const tipo = ssId === 'ssCategoria' ? 'categoria' : 'brand';
+    document.getElementById(inputId).value = valore;
+    document.getElementById(ssId + '-dropdown').style.display = 'none';
+
+    // Salva nel foglio
+    await fetch(CONFIG.APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'addOpzione', tipo, valore })
+    });
+
+    // Aggiorna cache locale
+    if (ssId === 'ssCategoria') ssData.ssCategoria.push(valore);
+    else                        ssData.ssBrand.push(valore);
+  }
+
+  function chiudiSmartSelect(ssId) {
+    setTimeout(() => {
+      const dd = document.getElementById(ssId + '-dropdown');
+      if (dd) dd.style.display = 'none';
+    }, 150);
   }
 </script>
 </body>

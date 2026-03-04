@@ -243,63 +243,116 @@ function stampaEtichette() {
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
   <style>
     * { box-sizing:border-box; margin:0; padding:0; }
-    body { font-family: system-ui, sans-serif; background:#fff; padding:12px; }
-    .controls { margin-bottom:16px; display:flex; gap:10px; align-items:center; }
-    .btn-print { padding:10px 22px; background:#5b87a0; color:white; border:none; border-radius:8px; font-size:14px; cursor:pointer; font-family:system-ui; }
-    .grid { display:flex; flex-wrap:wrap; gap:8px; }
+    body { font-family: system-ui, sans-serif; background:#fff; padding:10px; }
+
+    .controls {
+      margin-bottom:16px; display:flex; gap:10px; align-items:center;
+      padding:12px; background:#f5f5f5; border-radius:8px;
+    }
+    .btn-print {
+      padding:10px 22px; background:#5b87a0; color:white;
+      border:none; border-radius:8px; font-size:14px; cursor:pointer;
+    }
+    .info { font-size:13px; color:#666; }
+
+    /* Griglia etichette */
+    .grid { display:flex; flex-wrap:wrap; gap:3mm; }
+
+    /* Etichetta 50x30mm — layout orizzontale */
     .etichetta {
-      width: 62mm;
-      padding: 6px 8px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
+      width: 50mm;
+      height: 30mm;
+      padding: 2mm 2.5mm;
+      border: 0.3mm solid #999;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 2mm;
+      page-break-inside: avoid;
+      overflow: hidden;
+    }
+
+    /* Testo a sinistra */
+    .et-testo {
+      flex: 1;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      page-break-inside: avoid;
-      text-align: center;
-      gap: 4px;
+      justify-content: center;
+      gap: 0.8mm;
+      min-width: 0;
     }
-    .shop-name { font-size:9px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:#333; }
-    .shop-dot  { width:6px; height:6px; background:#5b87a0; border-radius:50%; display:inline-block; margin-right:4px; vertical-align:middle; }
-    .qr-wrap   { margin: 2px 0; }
-    .prod-nome { font-size:10px; font-weight:700; line-height:1.2; }
-    .prod-det  { font-size:9px; color:#555; }
-    .prod-price{ font-size:13px; font-weight:800; }
-    .prod-sku  { font-size:7px; color:#aaa; font-family:monospace; }
-    .divider   { width:100%; height:1px; background:#eee; margin:2px 0; }
+    .et-negozio {
+      font-size: 5.5pt;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: #111;
+      display: flex;
+      align-items: center;
+      gap: 1.5mm;
+    }
+    .et-dot {
+      width: 2mm; height: 2mm;
+      background: #5b87a0;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .et-divider { width:100%; height:0.2mm; background:#ddd; }
+    .et-nome {
+      font-size: 7pt;
+      font-weight: 700;
+      line-height: 1.15;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .et-det  { font-size: 5.5pt; color: #555; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .et-prezzo { font-size: 9pt; font-weight: 800; }
+    .et-sku  { font-size: 4.5pt; color: #aaa; font-family: monospace; }
+
+    /* QR a destra */
+    .et-qr { flex-shrink: 0; display:flex; align-items:center; justify-content:center; }
+    .et-qr img, .et-qr canvas { width:23mm !important; height:23mm !important; }
+
     @media print {
-      body { padding:4px; }
+      body { padding:2mm; }
       .controls { display:none; }
-      .etichetta { border-color:#999; }
+      .etichetta { border-color:#666; }
     }
   </style>
 </head>
 <body>
   <div class="controls">
     <button class="btn-print" onclick="window.print()">🖨️ Stampa</button>
-    <span style="font-size:13px; color:#888;">${prodotti.length} etichett${prodotti.length === 1 ? 'a' : 'e'} pronte</span>
+    <span class="info">${prodotti.length} etichett${prodotti.length === 1 ? 'a' : 'e'} · formato 50×30mm · ORGBRO Z3</span>
   </div>
   <div class="grid" id="grid"></div>
   <script>
     const prodotti = ${JSON.stringify(prodotti)};
     const negozio  = '${CONFIG.NEGOZIO_NOME}';
     const grid = document.getElementById('grid');
+
     prodotti.forEach(p => {
+      const det = [p.Taglia, p.Colore].filter(Boolean).join(' · ');
       const div = document.createElement('div');
       div.className = 'etichetta';
       div.innerHTML = \`
-        <div class="shop-name"><span class="shop-dot"></span>\${negozio}</div>
-        <div class="divider"></div>
-        <div class="qr-wrap" id="qr-\${p.SKU}"></div>
-        <div class="prod-nome">\${p.Nome}</div>
-        <div class="prod-det">\${p.Taglia} · \${p.Colore}</div>
-        <div class="prod-price">€ \${p.Prezzo}</div>
-        <div class="prod-sku">\${p.SKU}</div>
+        <div class="et-testo">
+          <div class="et-negozio"><span class="et-dot"></span>\${negozio}</div>
+          <div class="et-divider"></div>
+          <div class="et-nome">\${p.Nome}</div>
+          \${det ? \`<div class="et-det">\${det}</div>\` : ''}
+          <div class="et-prezzo">€ \${p.Prezzo || '—'}</div>
+          <div class="et-sku">\${p.SKU}</div>
+        </div>
+        <div class="et-qr" id="qr-\${p.SKU}"></div>
       \`;
       grid.appendChild(div);
       new QRCode(document.getElementById('qr-' + p.SKU), {
-        text: p.SKU, width: 80, height: 80,
-        colorDark: '#1a1a1a', colorLight: '#ffffff',
+        text: p.SKU,
+        width: 87, height: 87,
+        colorDark: '#000000', colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
       });
     });
   <\/script>
