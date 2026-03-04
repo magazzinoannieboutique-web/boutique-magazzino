@@ -13,11 +13,12 @@
 
 <header>
   <div class="container header-inner">
-    <span class="logo" id="logoNome">Boutique</span>
+    <span class="logo"><span class="logo-dot"></span><span id="logoNome">Boutique</span></span>
     <nav>
       <a href="#" class="active" data-section="dashboard">📊 <span>Dashboard</span></a>
       <a href="#" data-section="inventario">👗 <span>Inventario</span></a>
       <a href="#" data-section="carica">➕ <span>Carica</span></a>
+      <a href="#" data-section="etichette">🏷️ <span>Etichette</span></a>
       <a href="#" data-section="storico">📋 <span>Storico</span></a>
     </nav>
   </div>
@@ -102,10 +103,7 @@
 
       <div class="card">
         <div style="font-weight:600; margin-bottom:16px;">Dati articolo</div>
-        <div class="form-group">
-          <label class="form-label">SKU *</label>
-          <input class="form-input" id="nSKU" placeholder="es. VF-001">
-        </div>
+        <div id="skuGenerato" style="display:none; background:#f0f7fb; border:1px solid #c8dfe9; border-radius:8px; padding:10px 14px; font-size:13px; color:#5b87a0; font-weight:600; margin-bottom:16px;"></div>
         <div class="form-group">
           <label class="form-label">Nome *</label>
           <input class="form-input" id="nNome" placeholder="es. Vestito Floreale">
@@ -182,6 +180,22 @@
         </div>
       </div>
 
+    </div>
+  </section>
+
+  <!-- ===== ETICHETTE ===== -->
+  <section class="section" id="sec-etichette">
+    <h1 class="section-title">Stampa etichette QR</h1>
+    <div class="card" style="margin-bottom:20px;">
+      <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+        <input class="form-input" style="max-width:220px;" id="filtroEtichettaTesto" placeholder="Cerca per nome, SKU..." oninput="filtraEtichette()">
+        <button class="btn btn-ghost" onclick="selezionaTutte()">Seleziona tutte</button>
+        <button class="btn btn-ghost" onclick="deselezionaTutte()">deseleziona tutte</button>
+        <button class="btn btn-primary" onclick="stampaEtichette()">🖨️ Stampa selezionate</button>
+      </div>
+    </div>
+    <div id="listaEtichette" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap:12px;">
+      <div style="color:#888; font-size:14px;">Caricamento...</div>
     </div>
   </section>
 

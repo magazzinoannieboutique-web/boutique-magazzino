@@ -7,13 +7,13 @@
   --border:    #ebebeb;
   --text:      #1a1a1a;
   --text-muted:#888888;
-  --accent:    #1a1a1a;
+  --accent:    #5b87a0;
   --accent-fg: #ffffff;
   --success:   #2d6a4f;
   --warning:   #b5451b;
   --radius:    10px;
   --shadow:    0 1px 4px rgba(0,0,0,0.07);
-  --font:      'Inter', system-ui, sans-serif;
+  --font:      'DM Sans', system-ui, sans-serif;
 }
 
 body {
@@ -25,7 +25,11 @@ body {
 }
 
 /* ===== LAYOUT ===== */
-.container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
 
 header {
   background: var(--surface);
@@ -42,7 +46,23 @@ header {
   justify-content: space-between;
 }
 
-.logo { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; }
+.logo {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: inline-block;
+  flex-shrink: 0;
+}
 
 nav { display: flex; gap: 4px; }
 
@@ -61,7 +81,14 @@ nav a:hover, nav a.active {
   color: var(--text);
 }
 
-main { padding: 32px 0 64px; }
+nav a.active {
+  color: var(--accent);
+}
+
+main {
+  padding: 32px 0 64px;
+  margin-top: 30px;
+}
 
 /* ===== CARDS ===== */
 .card {
@@ -93,7 +120,7 @@ main { padding: 32px 0 64px; }
 }
 
 .stat-label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
-.stat-value { font-size: 28px; font-weight: 600; margin-top: 4px; }
+.stat-value { font-size: 28px; font-weight: 600; margin-top: 4px; color: var(--accent); }
 
 /* ===== ARTICOLO CARD ===== */
 .articolo-card {
@@ -104,7 +131,7 @@ main { padding: 32px 0 64px; }
   transition: box-shadow 0.15s;
 }
 
-.articolo-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+.articolo-card:hover { box-shadow: 0 4px 16px rgba(91,135,160,0.15); }
 
 .articolo-foto {
   width: 100%;
@@ -123,7 +150,7 @@ main { padding: 32px 0 64px; }
 .articolo-info { padding: 14px; }
 .articolo-nome { font-weight: 600; font-size: 15px; }
 .articolo-brand { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-.articolo-prezzo { font-size: 16px; font-weight: 600; margin-top: 8px; }
+.articolo-prezzo { font-size: 16px; font-weight: 600; margin-top: 8px; color: var(--accent); }
 
 /* ===== BADGE ===== */
 .badge {
@@ -161,6 +188,7 @@ main { padding: 32px 0 64px; }
   border: none;
   transition: all 0.15s;
   text-decoration: none;
+  font-family: var(--font);
 }
 
 .btn-primary { background: var(--accent); color: var(--accent-fg); }

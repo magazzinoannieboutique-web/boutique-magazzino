@@ -151,7 +151,6 @@
 
   <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
     <div style="font-size:16px; font-weight:600;">📱 Scanner</div>
-    <a href="index.html" style="color:#888; font-size:13px; text-decoration:none;">← Portale</a>
   </div>
 
   <!-- Selezione modalità -->
@@ -162,6 +161,11 @@
   </div>
 
   <!-- Scanner camera -->
+  <div id="readerWrap">
+    <button class="action-btn btn-vendi" id="btnAvvia" onclick="avviaScanner()" style="margin-bottom:16px; font-size:16px; padding:18px;">
+      📷 Avvia scanner
+    </button>
+  </div>
   <div id="reader"></div>
 
   <!-- Feedback -->
@@ -238,10 +242,11 @@
   // ============================================
   window.addEventListener('load', () => {
     scanner = new Html5Qrcode('reader');
-    avviaScanner();
+    // Scanner non parte automaticamente — aspetta il tasto
   });
 
   function avviaScanner() {
+    document.getElementById('btnAvvia').style.display = 'none';
     scanner.start(
       { facingMode: 'environment' },
       { fps: 10, qrbox: { width: 240, height: 240 } },
@@ -422,6 +427,7 @@
     nuovaFotoUrl = null;
     document.getElementById('resultCard').classList.remove('show');
     document.getElementById('feedbackOk').classList.remove('show');
+    document.getElementById('btnAvvia').style.display = 'block';
     avviaScanner();
   }
 
