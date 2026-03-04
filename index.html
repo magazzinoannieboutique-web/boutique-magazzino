@@ -7,32 +7,16 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=2">
+  <link rel="stylesheet" href="style.css?v=3">
   <script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
 </head>
 <body>
 
-<header>
-  <div class="container header-inner">
-    <img src="annie.png" alt="Annie" class="logo-img">
-    <nav>
-      <a href="#" class="active" data-section="dashboard">📱 <span>Cassa</span></a>
-      <a href="#" data-section="inventario">👗 <span>Inventario</span></a>
-      <a href="#" data-section="carica">➕ <span>Carica</span></a>
-      <a href="#" data-section="etichette">🏷️ <span>Etichette</span></a>
-      <a href="#" data-section="storico">📋 <span>Storico</span></a>
-    </nav>
-  </div>
-</header>
-
-<!-- ===== MODAL SCANSIONE ===== -->
+<!-- MODALS (fuori dalla shell) -->
 <div id="scanModal" class="modal-overlay" style="display:none;">
   <div class="modal-box">
     <div id="smSpeciale" style="display:none;">✂️ Modifica speciale</div>
-    <div id="smFotoWrap">
-      <img id="smFoto" src="" alt="">
-      <div id="smFotoPlaceholder">📷</div>
-    </div>
+    <div id="smFotoWrap"><img id="smFoto" src="" alt=""><div id="smFotoPlaceholder">📷</div></div>
     <div id="smBody">
       <div id="smNome"></div>
       <div id="smDettagli"></div>
@@ -46,190 +30,160 @@
   </div>
 </div>
 
-<main class="container">
-
-  <!-- ===== DASHBOARD ===== -->
-  <section class="section active" id="sec-dashboard">
-    <div id="dashIdle">
-      <img src="annie.png" alt="Annie" class="dash-logo">
-      <div class="dash-slogan">Passione · Ricerca · Bellezza</div>
-      <div class="dash-waiting">In attesa di scansione...</div>
-    </div>
-  </section>
-
-  <!-- ===== INVENTARIO ===== -->
-  <section class="section" id="sec-inventario">
-    <h1 class="section-title">Inventario</h1>
-    <div class="filtri">
-      <input class="form-input" style="max-width:220px;" id="filtroTesto" placeholder="Cerca per nome, SKU..." oninput="filtraInventario()">
-      <select class="form-select" style="max-width:160px;" id="filtroCategoria" onchange="filtraInventario()">
-        <option value="">Tutte le categorie</option>
-      </select>
-      <select class="form-select" style="max-width:160px;" id="filtroSpeciale" onchange="filtraInventario()">
-        <option value="">Tutti</option>
-        <option value="SI">✂️ Solo speciali</option>
-      </select>
-    </div>
-    <div class="card-grid" id="gridProdotti">
-      <div style="color:#888; font-size:14px;">Caricamento...</div>
-    </div>
-  </section>
-
-  <!-- ===== CARICA PRODOTTO ===== -->
-  <section class="section" id="sec-carica">
-    <h1 class="section-title">Carica nuovo prodotto</h1>
-
-    <div id="skuGenerato" style="display:none; background:#f0f7fb; border:1px solid #c8dfe9; border-radius:8px; padding:10px 16px; font-size:13px; color:var(--accent); font-weight:600; margin-bottom:20px;"></div>
-
-    <div style="display:grid; grid-template-columns: 2fr 1fr; gap:20px; align-items:start;">
-
-      <!-- Colonna sinistra — dati principali -->
-      <div class="card">
-        <div style="font-size:13px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:16px;">Dati prodotto</div>
-        <div class="form-group">
-          <label class="form-label">Nome *</label>
-          <input class="form-input" id="pNome" placeholder="es. Vestito Floreale">
-        </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0 16px;">
-          <div class="form-group">
-            <label class="form-label">Categoria</label>
-            <div class="smart-select" id="ssCategoria">
-              <input class="form-input" id="pCategoria" placeholder="Cerca o aggiungi..." autocomplete="off" oninput="filtraSmartSelect('ssCategoria','pCategoria')" onfocus="apriSmartSelect('ssCategoria','pCategoria')" onblur="chiudiSmartSelect('ssCategoria')">
-              <div class="ss-dropdown" id="ssCategoria-dropdown"></div>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Brand</label>
-            <div class="smart-select" id="ssBrand">
-              <input class="form-input" id="pBrand" placeholder="Cerca o aggiungi..." autocomplete="off" oninput="filtraSmartSelect('ssBrand','pBrand')" onfocus="apriSmartSelect('ssBrand','pBrand')" onblur="chiudiSmartSelect('ssBrand')">
-              <div class="ss-dropdown" id="ssBrand-dropdown"></div>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Taglia</label>
-            <input class="form-input" id="pTaglia" placeholder="es. S, M, L, 38">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Colore</label>
-            <input class="form-input" id="pColore" placeholder="es. Rosso, Nero, Blu">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Prezzo (€)</label>
-            <input class="form-input" id="pPrezzo" type="number" placeholder="49.90">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Quantità</label>
-            <input class="form-input" id="pQuantita" type="number" value="1">
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Note</label>
-          <input class="form-input" id="pNote" placeholder="">
-        </div>
-      </div>
-
-      <!-- Colonna destra — foto + opzioni + salva -->
-      <div style="display:flex; flex-direction:column; gap:16px;">
-
-        <div class="card">
-          <div style="font-size:13px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:16px;">Foto</div>
-          <div id="fotoPreview" style="display:none; margin-bottom:12px;">
-            <img src="" alt="Preview" style="width:100%; border-radius:8px; border:1px solid var(--border); object-fit:cover; aspect-ratio:3/4;">
-          </div>
-          <button type="button" class="btn btn-ghost" style="width:100%; justify-content:center;" onclick="apriCloudinary()">📷 Carica foto</button>
-          <input type="hidden" id="pFoto">
-          <div id="fotoStatus" style="font-size:12px; color:#888; margin-top:8px; text-align:center;">Nessuna foto</div>
-        </div>
-
-        <div class="card">
-          <div style="font-size:13px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:16px;">Opzioni</div>
-          <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label">Speciale</label>
-            <select class="form-select" id="pSpeciale">
-              <option value="NO">No</option>
-              <option value="SI">Sì ✂️</option>
-            </select>
-          </div>
-        </div>
-
-        <button class="btn btn-primary" style="width:100%; justify-content:center; padding:14px; font-size:15px;" onclick="salvaProdotto()">
-          Salva prodotto
-        </button>
-
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== ETICHETTE ===== -->
-  <section class="section" id="sec-etichette">
-    <h1 class="section-title">Stampa etichette QR</h1>
-    <div class="card" style="margin-bottom:20px;">
-      <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-        <input class="form-input" style="max-width:220px;" id="filtroEtichetta" placeholder="Cerca per nome, SKU..." oninput="filtraEtichette()">
-        <button class="btn btn-ghost" onclick="selezionaTutte()">Seleziona tutte</button>
-        <button class="btn btn-ghost" onclick="deselezionaTutte()">Deseleziona tutte</button>
-        <button class="btn btn-primary" onclick="stampaEtichette()">🖨️ Stampa selezionate</button>
-      </div>
-    </div>
-    <div id="listaEtichette" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px,1fr)); gap:10px;">
-      <div style="color:#888; font-size:14px;">Caricamento...</div>
-    </div>
-  </section>
-
-  <!-- ===== STORICO ===== -->
-  <section class="section" id="sec-storico">
-    <h1 class="section-title">Storico vendite</h1>
-    <div class="storico-stats">
-      <div class="storico-stat">
-        <div class="storico-stat-label">Vendite oggi</div>
-        <div class="storico-stat-value" id="statVenditeOggi">—</div>
-      </div>
-      <div class="storico-stat">
-        <div class="storico-stat-label">Incasso oggi</div>
-        <div class="storico-stat-value" id="statIncassoOggi">—</div>
-      </div>
-      <div class="storico-stat">
-        <div class="storico-stat-label">Vendite totali</div>
-        <div class="storico-stat-value" id="statVenditeTot">—</div>
-      </div>
-      <div class="storico-stat">
-        <div class="storico-stat-label">Incasso totale</div>
-        <div class="storico-stat-value" id="statIncassoTot">—</div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr><th>Data</th><th>Prodotto</th><th>Taglia</th><th>Colore</th><th>Prezzo</th><th>ID</th></tr>
-          </thead>
-          <tbody id="tabellaVendite">
-            <tr><td colspan="6" style="color:#888;">Caricamento...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-</main>
-
-<!-- ===== MODAL RIEPILOGO VENDITA MULTIPLA ===== -->
 <div id="riepilogoModal" class="modal-overlay" style="display:none;">
-  <div class="modal-box">
-    <div id="riepilogoHeader">
-      <h2>Riepilogo vendita</h2>
-      <p id="riepilogoSub"></p>
-    </div>
+  <div class="modal-box" style="max-width:440px;">
+    <div id="riepilogoHeader"><h2>Riepilogo vendita</h2><p id="riepilogoSub"></p></div>
     <div id="riepilogoLista"></div>
     <div id="riepilogoFooter">
       <div>
-        <div style="font-size:10px; color:var(--c3); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:2px;">Totale</div>
+        <div style="font-size:10px;color:var(--c3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:2px;">Totale</div>
         <div id="riepilogoTotale"></div>
       </div>
       <button id="riepilogoBtnChiudi" onclick="chiudiRiepilogo()">Chiudi</button>
     </div>
   </div>
 </div>
+
+<!-- APP SHELL -->
+<div class="app-shell">
+
+  <!-- Header flottante -->
+  <header class="app-header">
+    <img src="annie.png" alt="Annie" class="logo-img">
+    <nav>
+      <a href="#" class="active" data-section="dashboard">📱 <span>Cassa</span></a>
+      <a href="#" data-section="inventario">👗 <span>Inventario</span></a>
+      <a href="#" data-section="carica">➕ <span>Carica</span></a>
+      <a href="#" data-section="etichette">🏷️ <span>Etichette</span></a>
+      <a href="#" data-section="storico">📋 <span>Storico</span></a>
+    </nav>
+  </header>
+
+  <!-- Content card principale -->
+  <div class="content-card">
+    <main>
+
+      <!-- DASHBOARD -->
+      <section class="section active section-inner" id="sec-dashboard">
+        <div id="dashIdle">
+          <img src="annie.png" alt="Annie" class="dash-logo">
+          <div class="dash-slogan">Passione · Ricerca · Bellezza</div>
+          <div class="dash-waiting">In attesa di scansione</div>
+        </div>
+      </section>
+
+      <!-- INVENTARIO -->
+      <section class="section section-inner" id="sec-inventario">
+        <h1 class="section-title">Inventario</h1>
+        <div class="filtri">
+          <input class="form-input" style="max-width:220px;" id="filtroTesto" placeholder="Cerca per nome, SKU..." oninput="filtraInventario()">
+          <select class="form-select" style="max-width:160px;" id="filtroCategoria" onchange="filtraInventario()">
+            <option value="">Tutte le categorie</option>
+          </select>
+          <select class="form-select" style="max-width:160px;" id="filtroSpeciale" onchange="filtraInventario()">
+            <option value="">Tutti</option>
+            <option value="SI">✂️ Solo speciali</option>
+          </select>
+        </div>
+        <div class="card-grid" id="gridProdotti">
+          <div style="color:var(--c3); font-size:13px;">Caricamento...</div>
+        </div>
+      </section>
+
+      <!-- CARICA -->
+      <section class="section section-inner" id="sec-carica">
+        <h1 class="section-title">Carica nuovo prodotto</h1>
+        <div id="skuGenerato" style="display:none; background:rgba(91,135,160,0.08); border:1px solid rgba(91,135,160,0.2); border-radius:12px; padding:10px 16px; font-size:13px; color:var(--c4); margin-bottom:20px;"></div>
+        <div style="display:grid; grid-template-columns: 2fr 1fr; gap:20px; align-items:start;">
+          <div class="card">
+            <div style="font-size:10px; font-weight:500; color:var(--c3); text-transform:uppercase; letter-spacing:1px; margin-bottom:18px;">Dati prodotto</div>
+            <div class="form-group">
+              <label class="form-label">Nome *</label>
+              <input class="form-input" id="pNome" placeholder="es. Vestito Floreale">
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0 16px;">
+              <div class="form-group">
+                <label class="form-label">Categoria</label>
+                <div class="smart-select" id="ssCategoria">
+                  <input class="form-input" id="pCategoria" placeholder="Cerca o aggiungi..." autocomplete="off" oninput="filtraSmartSelect('ssCategoria','pCategoria')" onfocus="apriSmartSelect('ssCategoria','pCategoria')" onblur="chiudiSmartSelect('ssCategoria')">
+                  <div class="ss-dropdown" id="ssCategoria-dropdown"></div>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Brand</label>
+                <div class="smart-select" id="ssBrand">
+                  <input class="form-input" id="pBrand" placeholder="Cerca o aggiungi..." autocomplete="off" oninput="filtraSmartSelect('ssBrand','pBrand')" onfocus="apriSmartSelect('ssBrand','pBrand')" onblur="chiudiSmartSelect('ssBrand')">
+                  <div class="ss-dropdown" id="ssBrand-dropdown"></div>
+                </div>
+              </div>
+              <div class="form-group"><label class="form-label">Taglia</label><input class="form-input" id="pTaglia" placeholder="es. S, M, L, 38"></div>
+              <div class="form-group"><label class="form-label">Colore</label><input class="form-input" id="pColore" placeholder="es. Rosso, Nero"></div>
+              <div class="form-group"><label class="form-label">Prezzo (€)</label><input class="form-input" id="pPrezzo" type="number" placeholder="49.90"></div>
+              <div class="form-group"><label class="form-label">Quantità</label><input class="form-input" id="pQuantita" type="number" value="1"></div>
+            </div>
+            <div class="form-group"><label class="form-label">Note</label><input class="form-input" id="pNote" placeholder=""></div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:14px;">
+            <div class="card">
+              <div style="font-size:10px; font-weight:500; color:var(--c3); text-transform:uppercase; letter-spacing:1px; margin-bottom:14px;">Foto</div>
+              <div id="fotoPreview" style="display:none; margin-bottom:12px;">
+                <img src="" alt="" style="width:100%; border-radius:12px; object-fit:cover; aspect-ratio:3/4;">
+              </div>
+              <button type="button" class="btn btn-ghost" style="width:100%; justify-content:center;" onclick="apriCloudinary()">📷 Carica foto</button>
+              <input type="hidden" id="pFoto">
+              <div id="fotoStatus" style="font-size:11px; color:var(--c3); margin-top:8px; text-align:center;">Nessuna foto</div>
+            </div>
+            <div class="card">
+              <div style="font-size:10px; font-weight:500; color:var(--c3); text-transform:uppercase; letter-spacing:1px; margin-bottom:14px;">Opzioni</div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Speciale</label>
+                <select class="form-select" id="pSpeciale"><option value="NO">No</option><option value="SI">Sì ✂️</option></select>
+              </div>
+            </div>
+            <button class="btn btn-primary" style="width:100%; justify-content:center; padding:14px; font-size:14px;" onclick="salvaProdotto()">Salva prodotto</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ETICHETTE -->
+      <section class="section section-inner" id="sec-etichette">
+        <h1 class="section-title">Stampa etichette QR</h1>
+        <div class="card" style="margin-bottom:18px;">
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <input class="form-input" style="max-width:220px;" id="filtroEtichetta" placeholder="Cerca per nome, SKU..." oninput="filtraEtichette()">
+            <button class="btn btn-ghost" onclick="selezionaTutte()">Seleziona tutte</button>
+            <button class="btn btn-ghost" onclick="deselezionaTutte()">Deseleziona tutte</button>
+            <button class="btn btn-primary" onclick="stampaEtichette()">🖨️ Stampa selezionate</button>
+          </div>
+        </div>
+        <div id="listaEtichette" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px,1fr)); gap:10px;">
+          <div style="color:var(--c3); font-size:13px;">Caricamento...</div>
+        </div>
+      </section>
+
+      <!-- STORICO -->
+      <section class="section section-inner" id="sec-storico">
+        <h1 class="section-title">Storico vendite</h1>
+        <div class="storico-stats">
+          <div class="storico-stat"><div class="storico-stat-label">Vendite oggi</div><div class="storico-stat-value" id="statVenditeOggi">—</div></div>
+          <div class="storico-stat"><div class="storico-stat-label">Incasso oggi</div><div class="storico-stat-value" id="statIncassoOggi">—</div></div>
+          <div class="storico-stat"><div class="storico-stat-label">Vendite totali</div><div class="storico-stat-value" id="statVenditeTot">—</div></div>
+          <div class="storico-stat"><div class="storico-stat-label">Incasso totale</div><div class="storico-stat-value" id="statIncassoTot">—</div></div>
+        </div>
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Data</th><th>Prodotto</th><th>Taglia</th><th>Colore</th><th>Prezzo</th><th>ID</th></tr></thead>
+              <tbody id="tabellaVendite"><tr><td colspan="6" style="color:var(--c3);">Caricamento...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div><!-- /content-card -->
+
+</div><!-- /app-shell -->
 
 <div class="toast" id="toast"></div>
 
