@@ -181,13 +181,21 @@ async function salvaProdotto() {
     Foto_URL:  document.getElementById('pFoto').value,
   };
   if (!dati.Nome) { showToast('Il nome è obbligatorio', 'error'); return; }
+
+  const btn = document.querySelector('#sec-carica .btn-primary');
+  btn.textContent = '⏳ Salvataggio...';
+  btn.disabled = true;
+
   const res = await apiPost(dati);
+
+  btn.textContent = 'Salva prodotto';
+  btn.disabled = false;
+
   if (res.success) {
     showToast(`✅ Prodotto salvato!`, 'success');
     const box = document.getElementById('skuGenerato');
     box.textContent = `✅ SKU generato: ${res.sku}`;
     box.style.display = 'block';
-    // Reset form
     ['pNome','pCategoria','pBrand','pTaglia','pColore','pPrezzo','pNote','pFoto'].forEach(id => {
       document.getElementById(id).value = '';
     });
