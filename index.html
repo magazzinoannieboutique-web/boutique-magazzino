@@ -176,13 +176,29 @@
   <!-- ===== STORICO ===== -->
   <section class="section" id="sec-storico">
     <h1 class="section-title">Storico vendite</h1>
+    <div class="storico-stats">
+      <div class="storico-stat">
+        <div class="storico-stat-label">Vendite oggi</div>
+        <div class="storico-stat-value" id="statVenditeOggi">—</div>
+      </div>
+      <div class="storico-stat">
+        <div class="storico-stat-label">Incasso oggi</div>
+        <div class="storico-stat-value" id="statIncassoOggi">—</div>
+      </div>
+      <div class="storico-stat">
+        <div class="storico-stat-label">Vendite totali</div>
+        <div class="storico-stat-value" id="statVenditeTot">—</div>
+      </div>
+      <div class="storico-stat">
+        <div class="storico-stat-label">Incasso totale</div>
+        <div class="storico-stat-value" id="statIncassoTot">—</div>
+      </div>
+    </div>
     <div class="card">
       <div class="table-wrap">
         <table>
           <thead>
-            <tr>
-              <th>Data</th><th>Prodotto</th><th>Taglia</th><th>Colore</th><th>Prezzo</th><th>ID</th>
-            </tr>
+            <tr><th>Data</th><th>Prodotto</th><th>Taglia</th><th>Colore</th><th>Prezzo</th><th>ID</th></tr>
           </thead>
           <tbody id="tabellaVendite">
             <tr><td colspan="6" style="color:#888;">Caricamento...</td></tr>
@@ -193,6 +209,24 @@
   </section>
 
 </main>
+
+<!-- ===== MODAL RIEPILOGO VENDITA MULTIPLA ===== -->
+<div id="riepilogoModal" style="display:none;">
+  <div id="riepilogoInner">
+    <div id="riepilogoHeader">
+      <h2>Riepilogo vendita</h2>
+      <p id="riepilogoSub"></p>
+    </div>
+    <div id="riepilogoLista"></div>
+    <div id="riepilogoFooter">
+      <div>
+        <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.6px; margin-bottom:2px;">Totale</div>
+        <div id="riepilogoTotale"></div>
+      </div>
+      <button id="riepilogoBtnChiudi" onclick="chiudiRiepilogo()">Chiudi</button>
+    </div>
+  </div>
+</div>
 
 <div class="toast" id="toast"></div>
 

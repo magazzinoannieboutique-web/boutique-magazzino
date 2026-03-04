@@ -64,6 +64,15 @@ function avviaPolling() {
         mostraModalScan(data.scan);
       }
     } catch(e) {}
+
+    // Controlla anche riepilogo vendita multipla
+    try {
+      const r = await api({ action: 'getRiepilogo' });
+      if (r.riepilogo && r.riepilogo.length) {
+        mostraRiepilogo(r.riepilogo);
+      }
+    } catch(e) {}
+
     setTimeout(tick, CONFIG.POLLING_INTERVAL);
   }
   setTimeout(tick, CONFIG.POLLING_INTERVAL);
@@ -401,14 +410,55 @@ function stampaEtichette() {
 async function caricaStorico() {
   const data  = await api({ action: 'getVendite' });
   const tbody = document.getElementById('tabellaVendite');
-  if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" style="color:#888;">Nessuna vendita ancora</td></tr>'; return; }
+
+  // Stats oggi
+  const oggi = new Date(); oggi.setHours(0,0,0,0);
+  const venditeOggi = data.filter(v => {
+    const d = new Date(v.Timestamp); d.setHours(0,0,0,0);
+    return d.getTime() === oggi.getTime();
+  });
+  const incassoOggi  = venditeOggi.reduce((s,v) => s + parseFloat(v.Prezzo||0), 0);
+  const incassoTot   = data.reduce((s,v) => s + parseFloat(v.Prezzo||0), 0);
+
+  document.getElementById('statVenditeOggi').textContent = venditeOggi.length;
+  document.getElementById('statIncassoOggi').textContent = '€ ' + incassoOggi.toFixed(2);
+  document.getElementById('statVenditeTot').textContent  = data.length;
+  document.getElementById('statIncassoTot').textContent  = '€ ' + incassoTot.toFixed(2);
+
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="color:#888;">Nessuna vendita ancora</td></tr>';
+    return;
+  }
   tbody.innerHTML = [...data].reverse().map(v => `<tr>
     <td>${new Date(v.Timestamp).toLocaleString('it-IT')}</td>
     <td><strong>${v.Nome}</strong></td>
-    <td>${v.Taglia}</td><td>${v.Colore}</td>
-    <td>${CONFIG.VALUTA} ${v.Prezzo}</td>
-    <td style="color:#bbb; font-size:12px;">${v.ID_Vendita}</td>
+    <td>${v.Taglia||'—'}</td><td>${v.Colore||'—'}</td>
+    <td style="font-family:var(--font-serif); font-size:15px;">${CONFIG.VALUTA} ${v.Prezzo}</td>
+    <td style="color:#bbb; font-size:11px;">${v.ID_Vendita}</td>
   </tr>`).join('');
+}
+
+// ============================================
+// MODAL RIEPILOGO VENDITA MULTIPLA
+// ============================================
+function mostraRiepilogo(capi) {
+  const totale = capi.reduce((s,c) => s + parseFloat(c.Prezzo||0), 0);
+  document.getElementById('riepilogoSub').textContent = capi.length + ' capo' + (capi.length !== 1 ? 'i' : '') + ' venduto' + (capi.length !== 1 ? 'i' : '');
+  document.getElementById('riepilogoLista').innerHTML = capi.map(c => `
+    <div class="riepilogo-row">
+      <div>
+        <div class="riepilogo-nome">${c.Nome}</div>
+        <div class="riepilogo-det">${[c.Taglia, c.Colore].filter(Boolean).join(' · ')}</div>
+      </div>
+      <div class="riepilogo-prezzo">€ ${c.Prezzo}</div>
+    </div>
+  `).join('');
+  document.getElementById('riepilogoTotale').textContent = '€ ' + totale.toFixed(2);
+  document.getElementById('riepilogoModal').style.display = 'flex';
+}
+
+function chiudiRiepilogo() {
+  document.getElementById('riepilogoModal').style.display = 'none';
 }
 
 // ============================================

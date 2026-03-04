@@ -51,7 +51,16 @@
     .btn-save  { background:#5b87a0; color:white; }
     .btn-foto  { background:#2a2a2a; color:white; border:1px solid #444; }
     .btn-foto.uploaded { background:#1a3a2a; color:#6fcf97; border-color:#2d6a4f; }
-    .btn-again { background:#2a2a2a; color:#aaa; }
+    .btn-multi { background:#2a2a2a; color:#c9a96e; border:1px solid #444; }
+    .btn-multi:hover { background:#333; }
+    .carrello-item {
+      display:flex; justify-content:space-between; align-items:center;
+      padding:7px 0; border-bottom:1px solid #2a2a2a; font-size:13px;
+    }
+    .carrello-item:last-child { border-bottom:none; }
+    .carrello-item-nome { font-weight:600; }
+    .carrello-item-det  { font-size:11px; color:#888; }
+    .carrello-item-prezzo { color:#c9a96e; font-size:14px; flex-shrink:0; margin-left:10px; }
 
     .qty-wrap  { display:flex; align-items:center; gap:12px; margin:12px 0; }
     .qty-btn   { width:40px; height:40px; border:1px solid #333; background:#2a2a2a; color:white;
@@ -105,7 +114,15 @@
 
     <!-- Vendita -->
     <div id="azioniVendita">
-      <button class="action-btn btn-sell"  onclick="eseguiVendita()">✅ Segna come venduto</button>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px;">
+        <button class="action-btn btn-sell" onclick="eseguiVendita()">✅ Singola</button>
+        <button class="action-btn btn-multi" onclick="aggiungiACarrello()">➕ Multipla</button>
+      </div>
+      <div id="carrelloWrap" style="display:none; margin-top:12px;">
+        <div style="font-size:12px; color:#888; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Carrello</div>
+        <div id="carrelloLista"></div>
+        <button class="action-btn btn-save" style="margin-top:10px;" onclick="chiudiVenditaMultipla()">🏁 Chiudi e invia</button>
+      </div>
       <button class="action-btn btn-again" onclick="rescan()">↩ Scansiona ancora</button>
     </div>
 
@@ -140,6 +157,9 @@
   let scanner = null;
   let prodottoCorrente = null;
   let qtyCorrente      = 0;
+  let carrello         = [];       // vendita multipla
+  let ultimoScanTs     = 0;        // cooldown anti-duplicato
+  const COOLDOWN_MS    = 2500;
 
   // ============================================
   // JSONP — risolve CORS con Apps Script
@@ -181,6 +201,11 @@
   }
 
   async function onScan(qrCode) {
+    // Cooldown anti-doppio scan
+    const now = Date.now();
+    if (now - ultimoScanTs < COOLDOWN_MS) { avviaScanner(); return; }
+    ultimoScanTs = now;
+
     await scanner.stop();
     // Notifica portale + carica prodotto in parallelo
     const [_, p] = await Promise.all([
@@ -212,12 +237,80 @@
     document.getElementById('azioniVendita').style.display    = mode === 'vendita'    ? 'block' : 'none';
     document.getElementById('azioniInventario').style.display = mode === 'inventario' ? 'block' : 'none';
     document.getElementById('azioniCheck').style.display      = mode === 'check'      ? 'block' : 'none';
+    // Mostra carrello se ci sono già pezzi
+    aggiornaCarrelloUI();
   }
 
+  // ---- Vendita singola ----
   async function eseguiVendita() {
     const data = await jsonp({ action: 'vendiProdotto', sku: prodottoCorrente.SKU });
     if (data.success) mostraFeedback('✅', 'Vendita registrata!', `${prodottoCorrente.Nome} · ${prodottoCorrente.Taglia} ${prodottoCorrente.Colore}`);
     else              mostraFeedback('❌', data.error || 'Errore', '');
+  }
+
+  // ---- Vendita multipla: aggiungi al carrello ----
+  function aggiungiACarrello() {
+    if (!prodottoCorrente) return;
+    carrello.push({ ...prodottoCorrente });
+    aggiornaCarrelloUI();
+    // Riavvia scanner subito per il prossimo capo
+    document.getElementById('resultCard').classList.remove('show');
+    document.getElementById('btnAvvia').style.display = 'block';
+    setTimeout(() => avviaScanner(), 300);
+  }
+
+  function aggiornaCarrelloUI() {
+    if (!carrello.length) {
+      document.getElementById('carrelloWrap').style.display = 'none';
+      return;
+    }
+    document.getElementById('carrelloWrap').style.display = 'block';
+    document.getElementById('carrelloLista').innerHTML = carrello.map((c, i) => `
+      <div class="carrello-item">
+        <div>
+          <div class="carrello-item-nome">${c.Nome}</div>
+          <div class="carrello-item-det">${[c.Taglia, c.Colore].filter(Boolean).join(' · ')}</div>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div class="carrello-item-prezzo">€ ${c.Prezzo}</div>
+          <button onclick="rimuoviDaCarrello(${i})" style="background:none;border:none;color:#666;cursor:pointer;font-size:16px;">✕</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function rimuoviDaCarrello(i) {
+    carrello.splice(i, 1);
+    aggiornaCarrelloUI();
+  }
+
+  // ---- Chiudi vendita multipla: vendi tutto e mostra riepilogo ----
+  async function chiudiVenditaMultipla() {
+    if (!carrello.length) return;
+    const btn = document.querySelector('#azioniVendita .btn-save');
+    btn.textContent = '⏳ Invio...'; btn.disabled = true;
+
+    // Vendi uno per uno
+    const risultati = [];
+    for (const capo of carrello) {
+      const res = await jsonp({ action: 'vendiProdotto', sku: capo.SKU });
+      if (res.success) risultati.push(capo);
+    }
+
+    btn.textContent = '🏁 Chiudi e invia'; btn.disabled = false;
+
+    // Riepilogo su schermo (scanner)
+    const totale = risultati.reduce((s,c) => s + parseFloat(c.Prezzo||0), 0);
+    mostraFeedback(
+      '✅',
+      risultati.length + ' capi venduti',
+      '€ ' + totale.toFixed(2) + ' totale'
+    );
+
+    // Notifica portale via polling — il PC vedrà il riepilogo
+    await jsonp({ action: 'setRiepilogo', capi: JSON.stringify(risultati) });
+
+    carrello = [];
   }
 
   function cambiaQty(delta) {
