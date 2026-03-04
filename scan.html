@@ -141,6 +141,27 @@
   let prodottoCorrente = null;
   let qtyCorrente      = 0;
 
+  // ============================================
+  // JSONP — risolve CORS con Apps Script
+  // ============================================
+  function jsonp(params) {
+    return new Promise((resolve, reject) => {
+      const cbName = 'cb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+      const script = document.createElement('script');
+      window[cbName] = (data) => {
+        delete window[cbName];
+        document.body.removeChild(script);
+        resolve(data);
+      };
+      script.src = CONFIG.APPS_SCRIPT_URL + '?' + new URLSearchParams({ ...params, callback: cbName });
+      script.onerror = () => { delete window[cbName]; reject(new Error('JSONP error')); };
+      document.body.appendChild(script);
+    });
+  }
+
+  // ============================================
+  // INIT SCANNER
+  // ============================================
   window.addEventListener('load', () => {
     scanner = new Html5Qrcode('reader');
   });
@@ -161,18 +182,12 @@
 
   async function onScan(qrCode) {
     await scanner.stop();
-
-    // Notifica portale
-    fetch(CONFIG.APPS_SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'setScanResult', sku: qrCode })
-    });
-
-    const res = await fetch(CONFIG.APPS_SCRIPT_URL + '?action=getProdotto&sku=' + encodeURIComponent(qrCode));
-    const p   = await res.json();
-
+    // Notifica portale + carica prodotto in parallelo
+    const [_, p] = await Promise.all([
+      jsonp({ action: 'setScanResult', sku: qrCode }),
+      jsonp({ action: 'getProdotto',   sku: qrCode })
+    ]);
     if (p.error) { mostraFeedback('❌', 'Prodotto non trovato', qrCode); return; }
-
     prodottoCorrente = p;
     qtyCorrente      = parseInt(p.Quantità) || 0;
     mostraRisultato(p);
@@ -181,32 +196,26 @@
   function mostraRisultato(p) {
     document.getElementById('feedback').classList.remove('show');
     document.getElementById('resultCard').classList.add('show');
-
     document.getElementById('rSpeciale').style.display = p.Speciale === 'SI' ? 'inline-block' : 'none';
     document.getElementById('rNome').textContent   = p.Nome;
     document.getElementById('rSub').textContent    = `${p.Taglia} · ${p.Colore} · ${p.Brand || ''}`;
     document.getElementById('rPrezzo').textContent = '€ ' + p.Prezzo;
     document.getElementById('rStock').textContent  = `In magazzino: ${p.Quantità} pz`;
-
     const rFoto = document.getElementById('rFoto');
     if (p.Foto_URL) { rFoto.src = p.Foto_URL; rFoto.style.display = 'block'; }
     else              { rFoto.style.display = 'none'; }
-
-    // Reset foto upload
     document.getElementById('nuovaFotoUrl').value = '';
     document.getElementById('fotoPreview').style.display = 'none';
     document.getElementById('btnFoto').className = 'action-btn btn-foto';
     document.getElementById('btnFoto').textContent = '📷 Aggiungi / Cambia foto';
     document.getElementById('qtyVal').textContent = qtyCorrente;
-
     document.getElementById('azioniVendita').style.display    = mode === 'vendita'    ? 'block' : 'none';
     document.getElementById('azioniInventario').style.display = mode === 'inventario' ? 'block' : 'none';
     document.getElementById('azioniCheck').style.display      = mode === 'check'      ? 'block' : 'none';
   }
 
   async function eseguiVendita() {
-    const res  = await fetch(CONFIG.APPS_SCRIPT_URL, { method:'POST', body: JSON.stringify({ action:'vendiProdotto', sku: prodottoCorrente.SKU }) });
-    const data = await res.json();
+    const data = await jsonp({ action: 'vendiProdotto', sku: prodottoCorrente.SKU });
     if (data.success) mostraFeedback('✅', 'Vendita registrata!', `${prodottoCorrente.Nome} · ${prodottoCorrente.Taglia} ${prodottoCorrente.Colore}`);
     else              mostraFeedback('❌', data.error || 'Errore', '');
   }
@@ -217,11 +226,10 @@
   }
 
   async function salvaInventario() {
-    await fetch(CONFIG.APPS_SCRIPT_URL, { method:'POST', body: JSON.stringify({ action:'aggiornaQuantita', sku: prodottoCorrente.SKU, quantita: qtyCorrente }) });
     const fotoUrl = document.getElementById('nuovaFotoUrl').value;
-    if (fotoUrl) {
-      await fetch(CONFIG.APPS_SCRIPT_URL, { method:'POST', body: JSON.stringify({ action:'aggiornaFoto', sku: prodottoCorrente.SKU, foto_url: fotoUrl }) });
-    }
+    const ops = [ jsonp({ action: 'aggiornaQuantita', sku: prodottoCorrente.SKU, quantita: qtyCorrente }) ];
+    if (fotoUrl) ops.push(jsonp({ action: 'aggiornaFoto', sku: prodottoCorrente.SKU, foto_url: fotoUrl }));
+    await Promise.all(ops);
     mostraFeedback('💾', 'Salvato!', `${prodottoCorrente.Nome} · ${prodottoCorrente.Taglia} → ${qtyCorrente} pz${fotoUrl ? ' + foto' : ''}`);
   }
 

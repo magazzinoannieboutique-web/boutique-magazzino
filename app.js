@@ -30,23 +30,25 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ============================================
-// API
+// API — tutto via JSONP (risolve CORS con Apps Script)
 // ============================================
-async function api(params) {
-  const res = await fetch(CONFIG.APPS_SCRIPT_URL + '?' + new URLSearchParams(params), {
-    redirect: 'follow'
+function jsonp(params) {
+  return new Promise((resolve, reject) => {
+    const cbName = 'cb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+    const script = document.createElement('script');
+    window[cbName] = (data) => {
+      delete window[cbName];
+      document.body.removeChild(script);
+      resolve(data);
+    };
+    script.src = CONFIG.APPS_SCRIPT_URL + '?' + new URLSearchParams({ ...params, callback: cbName });
+    script.onerror = () => { delete window[cbName]; reject(new Error('JSONP error')); };
+    document.body.appendChild(script);
   });
-  return res.json();
 }
 
-async function apiPost(body) {
-  const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
-    method: 'POST',
-    redirect: 'follow',
-    body: JSON.stringify(body)
-  });
-  return res.json();
-}
+function api(params)   { return jsonp(params); }
+function apiPost(body) { return jsonp(body); }
 
 // ============================================
 // POLLING
