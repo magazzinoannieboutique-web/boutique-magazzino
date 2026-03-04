@@ -51,67 +51,85 @@ function api(params)   { return jsonp(params); }
 function apiPost(body) { return jsonp(body); }
 
 // ============================================
-// POLLING
+// POLLING — silenzioso, non blocca il tab
 // ============================================
+let pollingAttivo = true;
+
 function avviaPolling() {
-  setInterval(async () => {
+  async function tick() {
+    if (!pollingAttivo) { setTimeout(tick, CONFIG.POLLING_INTERVAL); return; }
     try {
       const data = await api({ action: 'pollScan' });
       if (data.scan && (!scanCorrente || scanCorrente.SKU !== data.scan.SKU)) {
         scanCorrente = data.scan;
-        mostraScanBanner(data.scan);
+        mostraModalScan(data.scan);
       }
     } catch(e) {}
-  }, CONFIG.POLLING_INTERVAL);
+    setTimeout(tick, CONFIG.POLLING_INTERVAL);
+  }
+  setTimeout(tick, CONFIG.POLLING_INTERVAL);
 }
 
-function mostraScanBanner(p) {
-  document.getElementById('scanBanner').style.display  = 'block';
-  document.getElementById('scanNome').textContent      = p.Nome;
-  document.getElementById('scanDettagli').textContent  = `${p.Taglia} · ${p.Colore} · ${p.Brand || ''}`;
-  document.getElementById('scanPrezzo').textContent    = CONFIG.VALUTA + ' ' + p.Prezzo;
-  document.getElementById('scanStock').textContent     = `In magazzino: ${p.Quantità} pz`;
-  document.getElementById('scanSpeciale').style.display = p.Speciale === 'SI' ? 'inline-block' : 'none';
-  const fotoEl = document.getElementById('scanFoto');
-  fotoEl.innerHTML = p.Foto_URL
-    ? `<img src="${p.Foto_URL}" style="width:100%;height:100%;object-fit:cover;">`
-    : 'No foto';
+// ============================================
+// MODAL SCANSIONE
+// ============================================
+function mostraModalScan(p) {
+  // Foto
+  const foto = document.getElementById('smFoto');
+  const placeholder = document.getElementById('smFotoPlaceholder');
+  if (p.Foto_URL) {
+    foto.src = p.Foto_URL;
+    foto.style.display = 'block';
+    placeholder.style.display = 'none';
+  } else {
+    foto.style.display = 'none';
+    placeholder.style.display = 'block';
+  }
+
+  document.getElementById('smSpeciale').style.display = p.Speciale === 'SI' ? 'block' : 'none';
+  document.getElementById('smNome').textContent     = p.Nome;
+  document.getElementById('smDettagli').textContent = [p.Taglia, p.Colore, p.Brand].filter(Boolean).join(' · ');
+  document.getElementById('smPrezzo').textContent   = '€ ' + p.Prezzo;
+  document.getElementById('smStock').textContent    = 'In magazzino: ' + p.Quantità + ' pz';
+
+  // Reset bottone (fix doppia vendita)
+  const btn = document.getElementById('smBtnVendi');
+  btn.disabled = false;
+  btn.textContent = '✅ Segna venduto';
+
+  document.getElementById('scanModal').style.display = 'flex';
 }
 
 function chiudiScan() {
   scanCorrente = null;
-  document.getElementById('scanBanner').style.display = 'none';
+  document.getElementById('scanModal').style.display = 'none';
 }
 
 async function vendiDaPortale() {
   if (!scanCorrente) return;
+  const btn = document.getElementById('smBtnVendi');
+
+  // Fix doppia vendita — disabilita subito
+  btn.disabled = true;
+  btn.textContent = '⏳ Registrazione...';
+
   const res = await apiPost({ action: 'vendiProdotto', sku: scanCorrente.SKU });
   if (res.success) {
+    btn.textContent = '✅ Venduto!';
     showToast('✅ Vendita registrata!', 'success');
-    chiudiScan();
-    caricaDashboard();
+    setTimeout(() => chiudiScan(), 1200);
   } else {
+    btn.disabled = false;
+    btn.textContent = '✅ Segna venduto';
     showToast('❌ ' + (res.error || 'Errore'), 'error');
   }
 }
 
 // ============================================
-// DASHBOARD
+// DASHBOARD — solo slogan, niente dati
 // ============================================
-async function caricaDashboard() {
-  const d = await api({ action: 'getDashboard' });
-  document.getElementById('statVenditeOggi').textContent = d.venditeOggi;
-  document.getElementById('statIncassoOggi').textContent = CONFIG.VALUTA + ' ' + d.incassoOggi;
-  document.getElementById('statVenditeTot').textContent  = d.venditeTotali;
-  document.getElementById('statIncassoTot').textContent  = CONFIG.VALUTA + ' ' + d.incassoTotale;
-  const uv = document.getElementById('ultimaVendita');
-  if (d.ultimaVendita) {
-    const v = d.ultimaVendita;
-    uv.innerHTML = `<strong>${v.Nome}</strong> — ${v.Taglia} ${v.Colore} — ${CONFIG.VALUTA} ${v.Prezzo}
-      <span style="color:#bbb; margin-left:8px;">${new Date(v.Timestamp).toLocaleString('it-IT')}</span>`;
-  } else {
-    uv.textContent = 'Nessuna vendita ancora';
-  }
+function caricaDashboard() {
+  // niente da caricare, la dashboard è solo la schermata idle
 }
 
 // ============================================

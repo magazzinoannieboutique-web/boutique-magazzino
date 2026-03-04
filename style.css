@@ -26,7 +26,6 @@ body {
 
 /* ===== LAYOUT ===== */
 .container {
-  margin-top: 30px !important;
   max-width: 1100px;
   margin: 0 auto;
   padding: 0 24px;
@@ -47,22 +46,10 @@ header {
   justify-content: space-between;
 }
 
-.logo {
-  font-size: 17px;
-  font-weight: 600;
-  letter-spacing: -0.3px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.logo-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--accent);
-  display: inline-block;
-  flex-shrink: 0;
+.logo-img {
+  height: 36px;
+  width: auto;
+  display: block;
 }
 
 nav { display: flex; gap: 4px; }
@@ -271,6 +258,189 @@ tr:hover td { background: var(--bg); }
 
 /* ===== FILTRI ===== */
 .filtri { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+
+/* ===== DASHBOARD IDLE ===== */
+#dashIdle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 16px;
+  text-align: center;
+}
+
+.dash-logo {
+  width: 180px;
+  max-width: 60vw;
+  opacity: 0.85;
+}
+
+.dash-slogan {
+  font-size: 15px;
+  color: var(--text-muted);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.dash-waiting {
+  font-size: 13px;
+  color: #bbb;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dash-waiting::before {
+  content: '';
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #bbb;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.9); }
+  50%       { opacity: 1;   transform: scale(1.1); }
+}
+
+/* ===== MODAL SCANSIONE ===== */
+#scanModal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(4px);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+#scanModalInner {
+  background: white;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 420px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  animation: slideUp 0.25s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(30px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+#smSpeciale {
+  background: #3d1f00;
+  color: #f0a070;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 16px;
+  text-align: center;
+}
+
+#smFotoWrap {
+  width: 100%;
+  aspect-ratio: 4/3;
+  background: #f0f0f0;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#smFoto {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: none;
+}
+
+#smFotoPlaceholder {
+  font-size: 48px;
+  opacity: 0.3;
+}
+
+#scanModalInner > div:not(#smFotoWrap):not(#smAzioni):not(#smSpeciale) {
+  padding: 0 20px;
+}
+
+#smNome {
+  font-size: 22px;
+  font-weight: 700;
+  margin-top: 18px;
+  line-height: 1.2;
+  padding: 0 20px;
+}
+
+#smDettagli {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  padding: 0 20px;
+}
+
+#smPrezzo {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-top: 10px;
+  padding: 0 20px;
+}
+
+#smStock {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  padding: 0 20px;
+}
+
+#smAzioni {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 20px;
+  margin-top: 16px;
+}
+
+#smBtnVendi {
+  padding: 14px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s;
+}
+#smBtnVendi:hover    { opacity: 0.88; }
+#smBtnVendi:disabled { opacity: 0.5; cursor: default; }
+
+#smBtnIgnora {
+  padding: 14px;
+  background: #f0f0f0;
+  color: #666;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+#smBtnIgnora:hover { background: #e4e4e4; }
 
 /* ===== SMART SELECT ===== */
 .smart-select { position: relative; }

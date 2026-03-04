@@ -13,9 +13,9 @@
 
 <header>
   <div class="container header-inner">
-    <span class="logo"><span class="logo-dot"></span><span id="logoNome">Boutique</span></span>
+    <img src="annie.png" alt="Annie" class="logo-img">
     <nav>
-      <a href="#" class="active" data-section="dashboard">📊 <span>Dashboard</span></a>
+      <a href="#" class="active" data-section="dashboard">📱 <span>Cassa</span></a>
       <a href="#" data-section="inventario">👗 <span>Inventario</span></a>
       <a href="#" data-section="carica">➕ <span>Carica</span></a>
       <a href="#" data-section="etichette">🏷️ <span>Etichette</span></a>
@@ -24,43 +24,33 @@
   </div>
 </header>
 
-<main class="container">
-
-  <!-- ===== SCAN BANNER ===== -->
-  <div id="scanBanner" style="display:none; margin-bottom:24px;">
-    <div class="card" style="border-left: 4px solid var(--accent);">
-      <div style="display:flex; gap:16px; align-items:flex-start;">
-        <div id="scanFoto" style="width:80px; height:100px; background:#fafafa; border-radius:8px; overflow:hidden; flex-shrink:0; display:flex; align-items:center; justify-content:center; color:#888; font-size:12px;">No foto</div>
-        <div style="flex:1;">
-          <div style="display:flex; gap:8px; align-items:center; margin-bottom:4px;">
-            <span style="font-size:11px; font-weight:500; color:#888; text-transform:uppercase; letter-spacing:0.5px;">📱 Scansione attiva</span>
-            <span id="scanSpeciale" style="display:none;" class="badge badge-speciale">✂️ Speciale</span>
-          </div>
-          <div id="scanNome"     style="font-size:18px; font-weight:600;"></div>
-          <div id="scanDettagli" style="color:#888; font-size:13px; margin-top:2px;"></div>
-          <div id="scanPrezzo"   style="font-size:20px; font-weight:600; margin-top:6px;"></div>
-          <div id="scanStock"    style="font-size:13px; color:#888; margin-top:2px;"></div>
-        </div>
-        <div style="display:flex; flex-direction:column; gap:8px; align-items:flex-end;">
-          <button class="btn btn-success" onclick="vendiDaPortale()">✅ Segna venduto</button>
-          <button class="btn btn-ghost"   onclick="chiudiScan()">✕ Ignora</button>
-        </div>
-      </div>
+<!-- ===== MODAL SCANSIONE ===== -->
+<div id="scanModal" style="display:none;">
+  <div id="scanModalInner">
+    <div id="smSpeciale" style="display:none;">✂️ Modifica speciale</div>
+    <div id="smFotoWrap">
+      <img id="smFoto" src="" alt="">
+      <div id="smFotoPlaceholder">📷</div>
+    </div>
+    <div id="smNome"></div>
+    <div id="smDettagli"></div>
+    <div id="smPrezzo"></div>
+    <div id="smStock"></div>
+    <div id="smAzioni">
+      <button id="smBtnVendi" onclick="vendiDaPortale()">✅ Segna venduto</button>
+      <button id="smBtnIgnora" onclick="chiudiScan()">✕ Ignora</button>
     </div>
   </div>
+</div>
+
+<main class="container">
 
   <!-- ===== DASHBOARD ===== -->
   <section class="section active" id="sec-dashboard">
-    <h1 class="section-title">Dashboard</h1>
-    <div class="stat-grid">
-      <div class="stat-card"><div class="stat-label">Vendite oggi</div><div class="stat-value" id="statVenditeOggi">—</div></div>
-      <div class="stat-card"><div class="stat-label">Incasso oggi</div><div class="stat-value" id="statIncassoOggi">—</div></div>
-      <div class="stat-card"><div class="stat-label">Vendite totali</div><div class="stat-value" id="statVenditeTot">—</div></div>
-      <div class="stat-card"><div class="stat-label">Incasso totale</div><div class="stat-value" id="statIncassoTot">—</div></div>
-    </div>
-    <div class="card">
-      <div style="font-weight:600; margin-bottom:12px;">Ultima vendita</div>
-      <div id="ultimaVendita" style="color:#888; font-size:14px;">Nessuna vendita ancora</div>
+    <div id="dashIdle">
+      <img src="annie.png" alt="Annie" class="dash-logo">
+      <div class="dash-slogan">Passione · Ricerca · Bellezza</div>
+      <div class="dash-waiting">In attesa di scansione...</div>
     </div>
   </section>
 
@@ -239,26 +229,11 @@
   // ============================================
   let ssData = { ssCategoria: [], ssBrand: [] };
 
-  function jsonp(params) {
-  return new Promise((resolve, reject) => {
-    const cbName = 'cb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
-    const script = document.createElement('script');
-    window[cbName] = (data) => {
-      delete window[cbName];
-      document.body.removeChild(script);
-      resolve(data);
-    };
-    script.src = CONFIG.APPS_SCRIPT_URL + '?' + new URLSearchParams({ ...params, callback: cbName });
-    script.onerror = () => { delete window[cbName]; reject(new Error('JSONP error')); };
-    document.body.appendChild(script);
-  });
-}
-
-async function inizializzaSmartSelects() {
-  const data = await jsonp({ action: 'getOpzioni' });
-  ssData.ssCategoria = data.categorie || [];
-  ssData.ssBrand     = data.brand     || [];
-}
+  async function inizializzaSmartSelects() {
+    const data = await fetch(CONFIG.APPS_SCRIPT_URL + '?action=getOpzioni').then(r => r.json());
+    ssData.ssCategoria = data.categorie || [];
+    ssData.ssBrand     = data.brand     || [];
+  }
   inizializzaSmartSelects();
 
   function apriSmartSelect(ssId, inputId) {
