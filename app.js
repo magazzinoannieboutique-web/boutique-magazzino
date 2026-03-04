@@ -8,7 +8,6 @@ let scanCorrente  = null;
 // INIT
 // ============================================
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('logoNome').textContent = CONFIG.NEGOZIO_NOME;
 
   document.querySelectorAll('nav a').forEach(a => {
     a.addEventListener('click', e => {
