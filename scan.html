@@ -2,189 +2,370 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Scanner</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Annie — Scanner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="https://upload-widget.cloudinary.com/global/all.js"></script>
   <style>
-    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
-    body { background:#0f0f0f; color:white; min-height:100vh; font-family:'DM Sans',system-ui,sans-serif; }
-    .wrap { max-width:420px; margin:0 auto; padding:20px; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    .header { font-size:16px; font-weight:600; margin-bottom:20px; display:flex; align-items:center; gap:8px; }
-    .dot { width:9px; height:9px; border-radius:50%; background:#5b87a0; display:inline-block; }
+    :root {
+      --c0: #f0f5f8;
+      --c1: #ddeaf1;
+      --c2: #c4d9e6;
+      --c3: #8ab4c8;
+      --c4: #5b87a0;
+      --c5: #3d6378;
+      --c6: #1e3040;
+      --glass: rgba(255,255,255,0.72);
+      --font:  'DM Sans', system-ui, sans-serif;
+      --serif: 'Cormorant Garamond', Georgia, serif;
+    }
 
-    .mode-bar { display:flex; gap:8px; margin-bottom:20px; background:#1a1a1a; padding:6px; border-radius:12px; }
-    .mode-btn { flex:1; padding:10px; border:none; border-radius:8px; font-size:13px; font-weight:500;
-      cursor:pointer; background:transparent; color:#888; font-family:inherit; transition:all 0.15s; }
-    .mode-btn.active { background:white; color:#0f0f0f; }
+    html, body {
+      height: 100%;
+      font-family: var(--font);
+      font-weight: 300;
+      color: var(--c6);
+      -webkit-font-smoothing: antialiased;
+      background:
+        radial-gradient(ellipse at 20% 20%, rgba(91,135,160,0.22) 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 80%, rgba(61,99,120,0.18) 0%, transparent 55%),
+        linear-gradient(145deg, #c8dce8 0%, #e8f0f5 100%);
+      background-attachment: fixed;
+      min-height: 100vh;
+    }
 
-    #reader { border-radius:14px; overflow:hidden; background:#1a1a1a; }
+    /* ===== SHELL ===== */
+    .shell {
+      max-width: 420px;
+      margin: 0 auto;
+      padding: 16px 16px 40px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
 
-    /* Tasto avvia */
+    /* ===== HEADER ===== */
+    .app-header {
+      background: var(--glass);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.9);
+      border-radius: 20px;
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 16px rgba(30,48,64,0.10);
+    }
+
+    .logo-img { height: 28px; width: auto; }
+
+    /* ===== MODE BAR ===== */
+    .mode-bar {
+      background: var(--glass);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.9);
+      border-radius: 20px;
+      padding: 6px;
+      display: flex;
+      gap: 4px;
+      box-shadow: 0 4px 16px rgba(30,48,64,0.08);
+    }
+
+    .mode-btn {
+      flex: 1; padding: 9px 8px;
+      border: none; border-radius: 14px;
+      font-size: 13px; font-weight: 400;
+      font-family: var(--font);
+      cursor: pointer; transition: all 0.18s;
+      background: transparent; color: var(--c3);
+      letter-spacing: 0.1px;
+    }
+    .mode-btn.active {
+      background: var(--c4); color: white;
+      box-shadow: 0 2px 10px rgba(91,135,160,0.4);
+    }
+
+    /* ===== CONTENT CARD ===== */
+    .content-card {
+      background: var(--glass);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.9);
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(30,48,64,0.12);
+      flex: 1;
+    }
+
+    /* ===== SCANNER VIEW ===== */
+    #readerWrap {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    #reader {
+      width: 100% !important;
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    #reader video { border-radius: 16px; }
+
     .start-btn {
-      width:100%; padding:20px; background:#5b87a0; color:white; border:none;
-      border-radius:14px; font-size:16px; font-weight:600; cursor:pointer;
-      font-family:inherit; letter-spacing:0.3px; transition:opacity 0.15s;
+      width: 100%; padding: 16px;
+      background: var(--c4); color: white;
+      border: none; border-radius: 999px;
+      font-size: 14px; font-weight: 400;
+      font-family: var(--font); cursor: pointer;
+      box-shadow: 0 4px 14px rgba(91,135,160,0.4);
+      transition: all 0.18s; letter-spacing: 0.2px;
     }
-    .start-btn:hover { opacity:0.9; }
+    .start-btn:hover { background: var(--c5); transform: translateY(-1px); }
 
-    /* Card risultato */
-    .result-card { background:#1a1a1a; border-radius:14px; padding:20px; margin-top:16px; display:none; }
-    .result-card.show { display:block; }
+    /* ===== RESULT CARD ===== */
+    .result-inner { padding: 20px; display: none; flex-direction: column; gap: 12px; }
+    .result-inner.show { display: flex; }
 
-    .r-speciale { display:inline-block; background:#3d1f00; color:#f0a070; font-size:12px;
-      padding:3px 10px; border-radius:20px; margin-bottom:10px; }
-    .r-foto { width:100%; aspect-ratio:3/2; object-fit:cover; border-radius:10px; margin-bottom:14px; background:#111; }
-    .r-nome   { font-size:20px; font-weight:600; margin-bottom:4px; }
-    .r-sub    { color:#888; font-size:14px; }
-    .r-prezzo { font-size:24px; font-weight:600; margin:10px 0; color:#5b87a0; }
-    .r-stock  { font-size:14px; color:#aaa; }
+    .r-foto {
+      width: 100%; aspect-ratio: 4/3;
+      object-fit: cover; border-radius: 16px;
+      background: rgba(91,135,160,0.08);
+      display: none;
+    }
+    .r-foto.show { display: block; }
+    .r-foto-placeholder {
+      width: 100%; aspect-ratio: 4/3;
+      background: rgba(91,135,160,0.08);
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 40px; opacity: 0.2;
+    }
 
-    .divider  { height:1px; background:#2a2a2a; margin:14px 0; }
+    .r-speciale {
+      display: none;
+      background: rgba(180,130,30,0.1); color: #8a6020;
+      font-size: 10px; font-weight: 500;
+      padding: 5px 14px; border-radius: 999px;
+      letter-spacing: 0.8px; text-transform: uppercase;
+      border: 1px solid rgba(180,130,30,0.2);
+      align-self: flex-start;
+    }
 
-    .action-btn { width:100%; padding:14px; border:none; border-radius:10px; font-size:15px;
-      font-weight:600; cursor:pointer; font-family:inherit; margin-top:10px; transition:opacity 0.15s; }
-    .action-btn:hover { opacity:0.85; }
-    .btn-sell  { background:white; color:#0f0f0f; }
-    .btn-save  { background:#5b87a0; color:white; }
-    .btn-foto  { background:#2a2a2a; color:white; border:1px solid #444; }
-    .btn-foto.uploaded { background:#1a3a2a; color:#6fcf97; border-color:#2d6a4f; }
-    .btn-multi { background:#2a2a2a; color:#c9a96e; border:1px solid #444; }
-    .btn-multi:hover { background:#333; }
+    .r-nome   { font-family: var(--serif); font-size: 24px; font-weight: 500; line-height: 1.2; color: var(--c6); }
+    .r-sub    { font-size: 12px; color: var(--c3); margin-top: -4px; }
+    .r-prezzo { font-family: var(--serif); font-size: 36px; font-weight: 600; color: var(--c4); letter-spacing: -1px; }
+    .r-stock  { font-size: 12px; color: var(--c3); }
+
+    /* ===== AZIONI ===== */
+    .azioni { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+    .azioni-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    .btn {
+      padding: 13px 16px; border: none; border-radius: 999px;
+      font-size: 13px; font-weight: 400; font-family: var(--font);
+      cursor: pointer; transition: all 0.18s; letter-spacing: 0.1px;
+      text-align: center;
+    }
+    .btn-primary { background: var(--c4); color: white; box-shadow: 0 3px 12px rgba(91,135,160,0.35); }
+    .btn-primary:hover { background: var(--c5); transform: translateY(-1px); }
+    .btn-primary:disabled { opacity: 0.4; cursor: default; transform: none; box-shadow: none; }
+    .btn-secondary { background: rgba(91,135,160,0.10); color: var(--c4); border: 1px solid rgba(91,135,160,0.2); }
+    .btn-secondary:hover { background: rgba(91,135,160,0.18); }
+    .btn-ghost { background: rgba(30,48,64,0.05); color: var(--c3); border: 1px solid rgba(91,135,160,0.12); }
+    .btn-ghost:hover { background: rgba(91,135,160,0.1); color: var(--c5); }
+
+    /* ===== INVENTARIO ===== */
+    .qty-wrap {
+      display: flex; align-items: center; gap: 16px;
+      background: rgba(91,135,160,0.06); border-radius: 16px;
+      padding: 12px 16px;
+    }
+    .qty-label { font-size: 12px; color: var(--c3); flex: 1; text-transform: uppercase; letter-spacing: 0.5px; }
+    .qty-btn {
+      width: 36px; height: 36px;
+      border: 1px solid rgba(91,135,160,0.25);
+      background: white; color: var(--c4);
+      border-radius: 10px; font-size: 18px;
+      cursor: pointer; font-family: var(--font);
+      transition: all 0.15s; display: flex; align-items: center; justify-content: center;
+    }
+    .qty-btn:hover { background: var(--c4); color: white; border-color: var(--c4); }
+    .qty-val { font-family: var(--serif); font-size: 28px; font-weight: 500; color: var(--c4); min-width: 40px; text-align: center; }
+
+    .foto-preview { display: none; }
+    .foto-preview img { width: 100%; border-radius: 12px; max-height: 160px; object-fit: cover; }
+
+    /* ===== CARRELLO ===== */
+    .carrello-wrap {
+      display: none;
+      background: rgba(91,135,160,0.06);
+      border: 1px solid rgba(91,135,160,0.15);
+      border-radius: 16px;
+      padding: 14px;
+    }
+    .carrello-label { font-size: 10px; font-weight: 500; color: var(--c3); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
     .carrello-item {
-      display:flex; justify-content:space-between; align-items:center;
-      padding:7px 0; border-bottom:1px solid #2a2a2a; font-size:13px;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 0; border-bottom: 1px solid rgba(91,135,160,0.1); font-size: 13px;
     }
-    .carrello-item:last-child { border-bottom:none; }
-    .carrello-item-nome { font-weight:600; }
-    .carrello-item-det  { font-size:11px; color:#888; }
-    .carrello-item-prezzo { color:#c9a96e; font-size:14px; flex-shrink:0; margin-left:10px; }
+    .carrello-item:last-child { border-bottom: none; }
+    .carrello-item-nome { font-weight: 500; color: var(--c6); }
+    .carrello-item-det  { font-size: 11px; color: var(--c3); }
+    .carrello-item-prezzo { font-family: var(--serif); font-size: 16px; color: var(--c4); flex-shrink: 0; margin-left: 10px; }
+    .carrello-rm { background: none; border: none; color: var(--c3); cursor: pointer; font-size: 14px; padding: 0 4px; }
 
-    .qty-wrap  { display:flex; align-items:center; gap:12px; margin:12px 0; }
-    .qty-btn   { width:40px; height:40px; border:1px solid #333; background:#2a2a2a; color:white;
-      border-radius:8px; font-size:20px; cursor:pointer; font-family:inherit; }
-    .qty-val   { font-size:22px; font-weight:600; min-width:40px; text-align:center; }
+    /* ===== FEEDBACK ===== */
+    .feedback { display: none; flex-direction: column; align-items: center; justify-content: center; padding: 48px 24px; gap: 10px; text-align: center; }
+    .feedback.show { display: flex; }
+    .fb-icon  { font-size: 56px; }
+    .fb-testo { font-family: var(--serif); font-size: 22px; font-weight: 500; color: var(--c6); }
+    .fb-sub   { font-size: 13px; color: var(--c3); }
 
-    .foto-preview { display:none; margin-top:10px; }
-    .foto-preview img { width:100%; border-radius:10px; max-height:200px; object-fit:cover; }
-
-    /* Feedback */
-    .feedback { text-align:center; padding:48px 20px; display:none; }
-    .feedback.show { display:block; }
-    .fb-icon  { font-size:60px; margin-bottom:14px; }
-    .fb-testo { font-size:18px; font-weight:600; }
-    .fb-sub   { color:#888; font-size:14px; margin-top:6px; }
+    /* ===== DIVISORE ===== */
+    .divider { height: 1px; background: rgba(91,135,160,0.12); margin: 4px 0; }
   </style>
 </head>
 <body>
-<div class="wrap">
+<div class="shell">
 
-  <div class="header"><span class="dot"></span> Scanner</div>
+  <!-- Header -->
+  <header class="app-header">
+    <img src="annie.png" alt="Annie" class="logo-img">
+    <div style="font-size:12px; color:var(--c3); letter-spacing:0.5px; text-transform:uppercase;">Scanner</div>
+  </header>
 
+  <!-- Mode bar -->
   <div class="mode-bar">
-    <button class="mode-btn active" data-mode="vendita"    onclick="setMode('vendita')">🛍️ Vendita</button>
+    <button class="mode-btn active" data-mode="vendita"    onclick="setMode('vendita')">🛍 Vendita</button>
     <button class="mode-btn"        data-mode="inventario" onclick="setMode('inventario')">📦 Inventario</button>
     <button class="mode-btn"        data-mode="check"      onclick="setMode('check')">🔍 Check</button>
   </div>
 
-  <!-- Tasto avvia -->
-  <button class="start-btn" id="btnAvvia" onclick="avviaScanner()">📷 Avvia scanner</button>
+  <!-- Content -->
+  <div class="content-card">
 
-  <!-- Viewport camera -->
-  <div id="reader"></div>
-
-  <!-- Feedback -->
-  <div class="feedback" id="feedback">
-    <div class="fb-icon"  id="fbIcon"></div>
-    <div class="fb-testo" id="fbTesto"></div>
-    <div class="fb-sub"   id="fbSub"></div>
-    <button class="action-btn btn-again" style="margin-top:24px;" onclick="rescan()">↩ Scansiona ancora</button>
-  </div>
-
-  <!-- Card prodotto -->
-  <div class="result-card" id="resultCard">
-    <div id="rSpeciale" class="r-speciale" style="display:none;">✂️ Modifica speciale</div>
-    <img id="rFoto" class="r-foto" src="" alt="" style="display:none;">
-    <div class="r-nome"   id="rNome"></div>
-    <div class="r-sub"    id="rSub"></div>
-    <div class="r-prezzo" id="rPrezzo"></div>
-    <div class="r-stock"  id="rStock"></div>
-
-    <!-- Vendita -->
-    <div id="azioniVendita">
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px;">
-        <button class="action-btn btn-sell" onclick="eseguiVendita()">✅ Singola</button>
-        <button class="action-btn btn-multi" onclick="aggiungiACarrello()">➕ Multipla</button>
-      </div>
-      <div id="carrelloWrap" style="display:none; margin-top:12px;">
-        <div style="font-size:12px; color:#888; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Carrello</div>
-        <div id="carrelloLista"></div>
-        <button class="action-btn btn-save" style="margin-top:10px;" onclick="chiudiVenditaMultipla()">🏁 Chiudi e invia</button>
-      </div>
-      <button class="action-btn btn-again" onclick="rescan()">↩ Scansiona ancora</button>
+    <!-- Scanner -->
+    <div id="readerWrap">
+      <div id="reader"></div>
+      <button class="start-btn" id="btnAvvia" onclick="avviaScanner()">📷 Avvia scanner</button>
     </div>
 
-    <!-- Inventario -->
-    <div id="azioniInventario" style="display:none;">
-      <div class="divider"></div>
-      <div style="font-size:13px; color:#888;">Quantità in magazzino:</div>
-      <div class="qty-wrap">
-        <button class="qty-btn" onclick="cambiaQty(-1)">−</button>
-        <span class="qty-val" id="qtyVal">0</span>
-        <button class="qty-btn" onclick="cambiaQty(+1)">+</button>
+    <!-- Feedback -->
+    <div class="feedback" id="feedback">
+      <div class="fb-icon"  id="fbIcon"></div>
+      <div class="fb-testo" id="fbTesto"></div>
+      <div class="fb-sub"   id="fbSub"></div>
+      <button class="btn btn-ghost" style="margin-top:12px;" onclick="rescan()">↩ Scansiona ancora</button>
+    </div>
+
+    <!-- Risultato -->
+    <div class="result-inner" id="resultCard">
+
+      <!-- Foto -->
+      <img id="rFoto" class="r-foto" src="" alt="">
+      <div id="rFotoPlaceholder" class="r-foto-placeholder">📷</div>
+
+      <div id="rSpeciale" class="r-speciale">✂️ Modifica speciale</div>
+      <div class="r-nome"   id="rNome"></div>
+      <div class="r-sub"    id="rSub"></div>
+      <div class="r-prezzo" id="rPrezzo"></div>
+      <div class="r-stock"  id="rStock"></div>
+
+      <!-- VENDITA -->
+      <div id="azioniVendita" class="azioni">
+        <div class="azioni-row">
+          <button class="btn btn-primary" onclick="eseguiVendita()">✅ Singola</button>
+          <button class="btn btn-secondary" onclick="aggiungiACarrello()">➕ Multipla</button>
+        </div>
+
+        <!-- Carrello multipla -->
+        <div class="carrello-wrap" id="carrelloWrap">
+          <div class="carrello-label">Carrello</div>
+          <div id="carrelloLista"></div>
+          <button class="btn btn-primary" style="width:100%; margin-top:10px;" onclick="chiudiVenditaMultipla()">🏁 Chiudi e invia</button>
+        </div>
+
+        <button class="btn btn-ghost" onclick="rescan()">↩ Scansiona ancora</button>
       </div>
-      <button class="action-btn btn-foto" id="btnFoto" onclick="apriCloudinary()">📷 Aggiungi / Cambia foto</button>
-      <div class="foto-preview" id="fotoPreview"><img id="fotoPreviewImg" src="" alt=""></div>
-      <input type="hidden" id="nuovaFotoUrl">
-      <div class="divider"></div>
-      <button class="action-btn btn-save"  onclick="salvaInventario()">💾 Salva</button>
-      <button class="action-btn btn-again" onclick="rescan()">↩ Scansiona ancora</button>
-    </div>
 
-    <!-- Check -->
-    <div id="azioniCheck">
-      <button class="action-btn btn-again" onclick="rescan()">↩ Scansiona ancora</button>
-    </div>
-  </div>
+      <!-- INVENTARIO -->
+      <div id="azioniInventario" class="azioni" style="display:none;">
+        <div class="divider"></div>
+        <div class="qty-wrap">
+          <div class="qty-label">Quantità</div>
+          <button class="qty-btn" onclick="cambiaQty(-1)">−</button>
+          <span class="qty-val" id="qtyVal">0</span>
+          <button class="qty-btn" onclick="cambiaQty(+1)">+</button>
+        </div>
+        <button class="btn btn-secondary" id="btnFoto" onclick="apriCloudinary()">📷 Cambia foto</button>
+        <div class="foto-preview" id="fotoPreview"><img id="fotoPreviewImg" src="" alt=""></div>
+        <input type="hidden" id="nuovaFotoUrl">
+        <div class="divider"></div>
+        <button class="btn btn-primary" onclick="salvaInventario()">💾 Salva</button>
+        <button class="btn btn-ghost"   onclick="rescan()">↩ Scansiona ancora</button>
+      </div>
 
-</div>
+      <!-- CHECK -->
+      <div id="azioniCheck" class="azioni" style="display:none;">
+        <button class="btn btn-ghost" onclick="rescan()">↩ Scansiona ancora</button>
+      </div>
+
+    </div><!-- /result-inner -->
+  </div><!-- /content-card -->
+
+</div><!-- /shell -->
 
 <script src="config.js"></script>
 <script>
-  let mode    = 'vendita';
-  let scanner = null;
+  let mode             = 'vendita';
+  let scanner          = null;
   let prodottoCorrente = null;
   let qtyCorrente      = 0;
-  let carrello         = [];       // vendita multipla
-  let ultimoScanTs     = 0;        // cooldown anti-duplicato
+  let carrello         = [];
+  let ultimoScanTs     = 0;
   const COOLDOWN_MS    = 2500;
 
   // ============================================
-  // JSONP — risolve CORS con Apps Script
+  // JSONP
   // ============================================
   function jsonp(params) {
     return new Promise((resolve, reject) => {
       const cbName = 'cb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
       const script = document.createElement('script');
-      window[cbName] = (data) => {
+      const timeout = setTimeout(() => {
         delete window[cbName];
-        document.body.removeChild(script);
+        if (script.parentNode) document.body.removeChild(script);
+        reject(new Error('JSONP timeout'));
+      }, 10000);
+      window[cbName] = (data) => {
+        clearTimeout(timeout);
+        delete window[cbName];
+        if (script.parentNode) document.body.removeChild(script);
         resolve(data);
       };
       script.src = CONFIG.APPS_SCRIPT_URL + '?' + new URLSearchParams({ ...params, callback: cbName });
-      script.onerror = () => { delete window[cbName]; reject(new Error('JSONP error')); };
+      script.onerror = () => {
+        clearTimeout(timeout);
+        delete window[cbName];
+        if (script.parentNode) document.body.removeChild(script);
+        reject(new Error('JSONP error'));
+      };
       document.body.appendChild(script);
     });
   }
 
   // ============================================
-  // INIT SCANNER
+  // SCANNER
   // ============================================
-  window.addEventListener('load', () => {
-    scanner = new Html5Qrcode('reader');
-  });
+  window.addEventListener('load', () => { scanner = new Html5Qrcode('reader'); });
 
   function avviaScanner() {
     document.getElementById('btnAvvia').style.display = 'none';
@@ -192,22 +373,21 @@
     document.getElementById('resultCard').classList.remove('show');
     scanner.start(
       { facingMode: 'environment' },
-      { fps: 10, qrbox: { width: 240, height: 240 } },
+      { fps: 10, qrbox: { width: 220, height: 220 } },
       onScan, () => {}
     ).catch(err => {
       document.getElementById('reader').innerHTML =
-        `<div style="padding:40px;text-align:center;color:#888;">⚠️ Fotocamera non accessibile.<br><small>${err}</small></div>`;
+        `<div style="padding:40px;text-align:center;color:var(--c3);">⚠️ Fotocamera non accessibile.<br><small style="font-size:11px;">${err}</small></div>`;
     });
   }
 
   async function onScan(qrCode) {
-    // Cooldown anti-doppio scan
     const now = Date.now();
     if (now - ultimoScanTs < COOLDOWN_MS) { avviaScanner(); return; }
     ultimoScanTs = now;
-
     await scanner.stop();
-    // Notifica portale + carica prodotto in parallelo
+    document.getElementById('btnAvvia').style.display = 'none';
+
     const [_, p] = await Promise.all([
       jsonp({ action: 'setScanResult', sku: qrCode }),
       jsonp({ action: 'getProdotto',   sku: qrCode })
@@ -218,62 +398,81 @@
     mostraRisultato(p);
   }
 
+  // ============================================
+  // MOSTRA RISULTATO
+  // ============================================
   function mostraRisultato(p) {
     document.getElementById('feedback').classList.remove('show');
-    document.getElementById('resultCard').classList.add('show');
-    document.getElementById('rSpeciale').style.display = p.Speciale === 'SI' ? 'inline-block' : 'none';
-    document.getElementById('rNome').textContent   = p.Nome;
-    document.getElementById('rSub').textContent    = `${p.Taglia} · ${p.Colore} · ${p.Brand || ''}`;
-    document.getElementById('rPrezzo').textContent = '€ ' + p.Prezzo;
-    document.getElementById('rStock').textContent  = `In magazzino: ${p.Quantità} pz`;
+    const card = document.getElementById('resultCard');
+    card.classList.add('show');
+
     const rFoto = document.getElementById('rFoto');
-    if (p.Foto_URL) { rFoto.src = p.Foto_URL; rFoto.style.display = 'block'; }
-    else              { rFoto.style.display = 'none'; }
+    const rPlaceholder = document.getElementById('rFotoPlaceholder');
+    if (p.Foto_URL) {
+      rFoto.src = p.Foto_URL;
+      rFoto.classList.add('show');
+      rPlaceholder.style.display = 'none';
+    } else {
+      rFoto.classList.remove('show');
+      rPlaceholder.style.display = 'flex';
+    }
+
+    const spec = document.getElementById('rSpeciale');
+    spec.style.display = p.Speciale === 'SI' ? 'inline-block' : 'none';
+
+    document.getElementById('rNome').textContent   = p.Nome;
+    document.getElementById('rSub').textContent    = [p.Taglia, p.Colore, p.Brand].filter(Boolean).join(' · ');
+    document.getElementById('rPrezzo').textContent = '€ ' + p.Prezzo;
+    document.getElementById('rStock').textContent  = 'In magazzino: ' + p.Quantità + ' pz';
+
     document.getElementById('nuovaFotoUrl').value = '';
     document.getElementById('fotoPreview').style.display = 'none';
-    document.getElementById('btnFoto').className = 'action-btn btn-foto';
-    document.getElementById('btnFoto').textContent = '📷 Aggiungi / Cambia foto';
-    document.getElementById('qtyVal').textContent = qtyCorrente;
-    document.getElementById('azioniVendita').style.display    = mode === 'vendita'    ? 'block' : 'none';
-    document.getElementById('azioniInventario').style.display = mode === 'inventario' ? 'block' : 'none';
-    document.getElementById('azioniCheck').style.display      = mode === 'check'      ? 'block' : 'none';
-    // Mostra carrello se ci sono già pezzi
+    document.getElementById('btnFoto').textContent = '📷 Cambia foto';
+    document.getElementById('qtyVal').textContent  = qtyCorrente;
+
+    document.getElementById('azioniVendita').style.display    = mode === 'vendita'    ? 'flex' : 'none';
+    document.getElementById('azioniInventario').style.display = mode === 'inventario' ? 'flex' : 'none';
+    document.getElementById('azioniCheck').style.display      = mode === 'check'      ? 'flex' : 'none';
     aggiornaCarrelloUI();
   }
 
-  // ---- Vendita singola ----
+  // ============================================
+  // VENDITA SINGOLA
+  // ============================================
   async function eseguiVendita() {
+    const btn = document.querySelector('#azioniVendita .btn-primary');
+    btn.disabled = true; btn.textContent = '⏳';
     const data = await jsonp({ action: 'vendiProdotto', sku: prodottoCorrente.SKU });
-    if (data.success) mostraFeedback('✅', 'Vendita registrata!', `${prodottoCorrente.Nome} · ${prodottoCorrente.Taglia} ${prodottoCorrente.Colore}`);
+    btn.disabled = false; btn.textContent = '✅ Singola';
+    if (data.success) mostraFeedback('✅', 'Vendita registrata', prodottoCorrente.Nome);
     else              mostraFeedback('❌', data.error || 'Errore', '');
   }
 
-  // ---- Vendita multipla: aggiungi al carrello ----
+  // ============================================
+  // VENDITA MULTIPLA
+  // ============================================
   function aggiungiACarrello() {
     if (!prodottoCorrente) return;
     carrello.push({ ...prodottoCorrente });
     aggiornaCarrelloUI();
-    // Riavvia scanner subito per il prossimo capo
     document.getElementById('resultCard').classList.remove('show');
     document.getElementById('btnAvvia').style.display = 'block';
     setTimeout(() => avviaScanner(), 300);
   }
 
   function aggiornaCarrelloUI() {
-    if (!carrello.length) {
-      document.getElementById('carrelloWrap').style.display = 'none';
-      return;
-    }
-    document.getElementById('carrelloWrap').style.display = 'block';
+    const wrap = document.getElementById('carrelloWrap');
+    if (!carrello.length) { wrap.style.display = 'none'; return; }
+    wrap.style.display = 'block';
     document.getElementById('carrelloLista').innerHTML = carrello.map((c, i) => `
       <div class="carrello-item">
         <div>
           <div class="carrello-item-nome">${c.Nome}</div>
           <div class="carrello-item-det">${[c.Taglia, c.Colore].filter(Boolean).join(' · ')}</div>
         </div>
-        <div style="display:flex; align-items:center; gap:10px;">
+        <div style="display:flex;align-items:center;gap:6px;">
           <div class="carrello-item-prezzo">€ ${c.Prezzo}</div>
-          <button onclick="rimuoviDaCarrello(${i})" style="background:none;border:none;color:#666;cursor:pointer;font-size:16px;">✕</button>
+          <button class="carrello-rm" onclick="rimuoviDaCarrello(${i})">✕</button>
         </div>
       </div>
     `).join('');
@@ -284,51 +483,46 @@
     aggiornaCarrelloUI();
   }
 
-  // ---- Chiudi vendita multipla: vendi tutto e mostra riepilogo ----
   async function chiudiVenditaMultipla() {
     if (!carrello.length) return;
-    const btn = document.querySelector('#azioniVendita .btn-save');
+    const btn = document.querySelector('#carrelloWrap .btn-primary');
     btn.textContent = '⏳ Invio...'; btn.disabled = true;
 
-    // Vendi uno per uno
     const risultati = [];
     for (const capo of carrello) {
       const res = await jsonp({ action: 'vendiProdotto', sku: capo.SKU });
       if (res.success) risultati.push(capo);
     }
 
-    btn.textContent = '🏁 Chiudi e invia'; btn.disabled = false;
-
-    // Riepilogo su schermo (scanner)
     const totale = risultati.reduce((s,c) => s + parseFloat(c.Prezzo||0), 0);
-    mostraFeedback(
-      '✅',
-      risultati.length + ' capi venduti',
-      '€ ' + totale.toFixed(2) + ' totale'
-    );
-
-    // Notifica portale via polling — il PC vedrà il riepilogo
     await jsonp({ action: 'setRiepilogo', capi: JSON.stringify(risultati) });
-
     carrello = [];
+    mostraFeedback('✅', risultati.length + ' capi venduti', '€ ' + totale.toFixed(2) + ' totale');
   }
 
+  // ============================================
+  // INVENTARIO
+  // ============================================
   function cambiaQty(delta) {
     qtyCorrente = Math.max(0, qtyCorrente + delta);
     document.getElementById('qtyVal').textContent = qtyCorrente;
   }
 
   async function salvaInventario() {
+    const btn = document.querySelector('#azioniInventario .btn-primary');
+    btn.disabled = true; btn.textContent = '⏳ Salvataggio...';
     const fotoUrl = document.getElementById('nuovaFotoUrl').value;
-    const ops = [ jsonp({ action: 'aggiornaQuantita', sku: prodottoCorrente.SKU, quantita: qtyCorrente }) ];
+    const ops = [jsonp({ action: 'aggiornaQuantita', sku: prodottoCorrente.SKU, quantita: qtyCorrente })];
     if (fotoUrl) ops.push(jsonp({ action: 'aggiornaFoto', sku: prodottoCorrente.SKU, foto_url: fotoUrl }));
     await Promise.all(ops);
-    mostraFeedback('💾', 'Salvato!', `${prodottoCorrente.Nome} · ${prodottoCorrente.Taglia} → ${qtyCorrente} pz${fotoUrl ? ' + foto' : ''}`);
+    btn.disabled = false; btn.textContent = '💾 Salva';
+    mostraFeedback('💾', 'Salvato!', `${prodottoCorrente.Nome} → ${qtyCorrente} pz${fotoUrl ? ' + foto' : ''}`);
   }
 
   function apriCloudinary() {
     const widget = cloudinary.createUploadWidget({
-      cloudName: CONFIG.CLOUDINARY_CLOUD_NAME, uploadPreset: CONFIG.CLOUDINARY_UPLOAD_PRESET,
+      cloudName: CONFIG.CLOUDINARY_CLOUD_NAME,
+      uploadPreset: CONFIG.CLOUDINARY_UPLOAD_PRESET,
       sources: ['camera','local'], multiple: false, maxFileSize: 5000000,
       transformation: [{ width:800, crop:'limit', quality:'auto' }],
     }, (error, result) => {
@@ -338,15 +532,17 @@
         document.getElementById('fotoPreviewImg').src = url;
         document.getElementById('fotoPreview').style.display = 'block';
         document.getElementById('rFoto').src = url;
-        document.getElementById('rFoto').style.display = 'block';
-        const btn = document.getElementById('btnFoto');
-        btn.className = 'action-btn btn-foto uploaded';
-        btn.textContent = '✅ Foto caricata';
+        document.getElementById('rFoto').classList.add('show');
+        document.getElementById('rFotoPlaceholder').style.display = 'none';
+        document.getElementById('btnFoto').textContent = '✅ Foto caricata';
       }
     });
     widget.open();
   }
 
+  // ============================================
+  // UTILS
+  // ============================================
   function mostraFeedback(icon, testo, sub) {
     document.getElementById('resultCard').classList.remove('show');
     document.getElementById('fbIcon').textContent  = icon;
