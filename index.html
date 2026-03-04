@@ -3,10 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Boutique — Magazzino</title>
+  <title>Annie — Magazzino</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=2">
   <script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
 </head>
 <body>
@@ -25,20 +26,22 @@
 </header>
 
 <!-- ===== MODAL SCANSIONE ===== -->
-<div id="scanModal" style="display:none;">
-  <div id="scanModalInner">
+<div id="scanModal" class="modal-overlay" style="display:none;">
+  <div class="modal-box">
     <div id="smSpeciale" style="display:none;">✂️ Modifica speciale</div>
     <div id="smFotoWrap">
       <img id="smFoto" src="" alt="">
       <div id="smFotoPlaceholder">📷</div>
     </div>
-    <div id="smNome"></div>
-    <div id="smDettagli"></div>
-    <div id="smPrezzo"></div>
-    <div id="smStock"></div>
+    <div id="smBody">
+      <div id="smNome"></div>
+      <div id="smDettagli"></div>
+      <div id="smPrezzo"></div>
+      <div id="smStock"></div>
+    </div>
     <div id="smAzioni">
-      <button id="smBtnVendi" onclick="vendiDaPortale()">✅ Segna venduto</button>
-      <button id="smBtnIgnora" onclick="chiudiScan()">✕ Ignora</button>
+      <button id="smBtnVendi" onclick="vendiDaPortale()">Segna venduto</button>
+      <button id="smBtnIgnora" onclick="chiudiScan()">Ignora</button>
     </div>
   </div>
 </div>
@@ -211,8 +214,8 @@
 </main>
 
 <!-- ===== MODAL RIEPILOGO VENDITA MULTIPLA ===== -->
-<div id="riepilogoModal" style="display:none;">
-  <div id="riepilogoInner">
+<div id="riepilogoModal" class="modal-overlay" style="display:none;">
+  <div class="modal-box">
     <div id="riepilogoHeader">
       <h2>Riepilogo vendita</h2>
       <p id="riepilogoSub"></p>
@@ -220,7 +223,7 @@
     <div id="riepilogoLista"></div>
     <div id="riepilogoFooter">
       <div>
-        <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.6px; margin-bottom:2px;">Totale</div>
+        <div style="font-size:10px; color:var(--c3); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:2px;">Totale</div>
         <div id="riepilogoTotale"></div>
       </div>
       <button id="riepilogoBtnChiudi" onclick="chiudiRiepilogo()">Chiudi</button>

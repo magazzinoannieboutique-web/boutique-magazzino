@@ -35,13 +35,24 @@ function jsonp(params) {
   return new Promise((resolve, reject) => {
     const cbName = 'cb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
     const script = document.createElement('script');
-    window[cbName] = (data) => {
+    const timeout = setTimeout(() => {
       delete window[cbName];
-      document.body.removeChild(script);
+      if (script.parentNode) document.body.removeChild(script);
+      reject(new Error('JSONP timeout'));
+    }, 10000);
+    window[cbName] = (data) => {
+      clearTimeout(timeout);
+      delete window[cbName];
+      if (script.parentNode) document.body.removeChild(script);
       resolve(data);
     };
     script.src = CONFIG.APPS_SCRIPT_URL + '?' + new URLSearchParams({ ...params, callback: cbName });
-    script.onerror = () => { delete window[cbName]; reject(new Error('JSONP error')); };
+    script.onerror = () => {
+      clearTimeout(timeout);
+      delete window[cbName];
+      if (script.parentNode) document.body.removeChild(script);
+      reject(new Error('JSONP error'));
+    };
     document.body.appendChild(script);
   });
 }
@@ -68,10 +79,10 @@ function avviaPolling() {
     // Controlla anche riepilogo vendita multipla
     try {
       const r = await api({ action: 'getRiepilogo' });
-      if (r.riepilogo && r.riepilogo.length) {
+      if (r && r.riepilogo && r.riepilogo.length) {
         mostraRiepilogo(r.riepilogo);
       }
-    } catch(e) {}
+    } catch(e) { /* route non ancora deployata, ignora */ }
 
     setTimeout(tick, CONFIG.POLLING_INTERVAL);
   }
@@ -105,8 +116,7 @@ function mostraModalScan(p) {
   btn.disabled = false;
   btn.textContent = '✅ Segna venduto';
 
-  document.getElementById('scanModal').style.display = 'flex';
-}
+  document.getElementById('scanModal').style.display = 'flex';}
 
 function chiudiScan() {
   scanCorrente = null;
