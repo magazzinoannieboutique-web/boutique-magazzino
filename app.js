@@ -33,11 +33,18 @@ document.addEventListener('DOMContentLoaded', () => {
 // API
 // ============================================
 async function api(params) {
-  const res = await fetch(CONFIG.APPS_SCRIPT_URL + '?' + new URLSearchParams(params));
+  const res = await fetch(CONFIG.APPS_SCRIPT_URL + '?' + new URLSearchParams(params), {
+    redirect: 'follow'
+  });
   return res.json();
 }
+
 async function apiPost(body) {
-  const res = await fetch(CONFIG.APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify(body) });
+  const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
+    method: 'POST',
+    redirect: 'follow',
+    body: JSON.stringify(body)
+  });
   return res.json();
 }
 
