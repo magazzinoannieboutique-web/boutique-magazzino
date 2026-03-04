@@ -24,15 +24,17 @@
       <div id="smStock"></div>
     </div>
     <div id="smAzioni">
-      <button id="smBtnVendi" onclick="vendiDaPortale()">Segna venduto</button>
-      <button id="smBtnIgnora" onclick="chiudiScan()">Ignora</button>
+      <div style="grid-column:1/-1; font-size:11px; color:var(--c3); text-align:center; padding-bottom:4px; letter-spacing:0.3px;">
+        La vendita verrà chiusa dallo scanner 📱
+      </div>
+      <button id="smBtnIgnora" onclick="chiudiScan()" style="grid-column:1/-1;">Chiudi</button>
     </div>
   </div>
 </div>
 
 <div id="riepilogoModal" class="modal-overlay" style="display:none;">
   <div class="modal-box" style="max-width:440px;">
-    <div id="riepilogoHeader"><h2>Riepilogo vendita</h2><p id="riepilogoSub"></p></div>
+    <div id="riepilogoHeader"><h2>Vendita completata</h2><p id="riepilogoSub"></p></div>
     <div id="riepilogoLista"></div>
     <div id="riepilogoFooter">
       <div>
@@ -40,6 +42,10 @@
         <div id="riepilogoTotale"></div>
       </div>
       <button id="riepilogoBtnChiudi" onclick="chiudiRiepilogo()">Chiudi</button>
+    </div>
+    <!-- barra progressiva 15s -->
+    <div style="height:3px; background:rgba(91,135,160,0.12); border-radius:0 0 28px 28px; overflow:hidden;">
+      <div id="riepilogoBar" style="height:100%; background:var(--c4); width:100%;"></div>
     </div>
   </div>
 </div>

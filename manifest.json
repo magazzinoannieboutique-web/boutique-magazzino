@@ -1,0 +1,16 @@
+{
+  "name": "Annie Boutique",
+  "short_name": "Annie",
+  "start_url": "scan.html",
+  "display": "standalone",
+  "background_color": "#c8dce8",
+  "theme_color": "#5b87a0",
+  "icons": [
+    {
+      "src": "annie.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -90,64 +90,67 @@ function avviaPolling() {
 }
 
 // ============================================
-// MODAL SCANSIONE
+// MODAL SCANSIONE — solo visualizzazione, vende solo il telefono
 // ============================================
 function mostraModalScan(p) {
-  // Foto
   const foto = document.getElementById('smFoto');
   const placeholder = document.getElementById('smFotoPlaceholder');
-  if (p.Foto_URL) {
-    foto.src = p.Foto_URL;
-    foto.style.display = 'block';
-    placeholder.style.display = 'none';
-  } else {
-    foto.style.display = 'none';
-    placeholder.style.display = 'block';
-  }
-
+  if (p.Foto_URL) { foto.src = p.Foto_URL; foto.style.display = 'block'; placeholder.style.display = 'none'; }
+  else            { foto.style.display = 'none'; placeholder.style.display = 'block'; }
   document.getElementById('smSpeciale').style.display = p.Speciale === 'SI' ? 'block' : 'none';
   document.getElementById('smNome').textContent     = p.Nome;
   document.getElementById('smDettagli').textContent = [p.Taglia, p.Colore, p.Brand].filter(Boolean).join(' · ');
   document.getElementById('smPrezzo').textContent   = '€ ' + p.Prezzo;
   document.getElementById('smStock').textContent    = 'In magazzino: ' + p.Quantità + ' pz';
-
-  // Reset bottone (fix doppia vendita)
-  const btn = document.getElementById('smBtnVendi');
-  btn.disabled = false;
-  btn.textContent = '✅ Segna venduto';
-
-  document.getElementById('scanModal').style.display = 'flex';}
+  document.getElementById('scanModal').style.display = 'flex';
+}
 
 function chiudiScan() {
   scanCorrente = null;
   document.getElementById('scanModal').style.display = 'none';
 }
 
-async function vendiDaPortale() {
-  if (!scanCorrente) return;
-  const btn = document.getElementById('smBtnVendi');
-
-  // Fix doppia vendita — disabilita subito
-  btn.disabled = true;
-  btn.textContent = '⏳ Registrazione...';
-
-  const res = await apiPost({ action: 'vendiProdotto', sku: scanCorrente.SKU });
-  if (res.success) {
-    btn.textContent = '✅ Venduto!';
-    showToast('✅ Vendita registrata!', 'success');
-    setTimeout(() => chiudiScan(), 1200);
-  } else {
-    btn.disabled = false;
-    btn.textContent = '✅ Segna venduto';
-    showToast('❌ ' + (res.error || 'Errore'), 'error');
-  }
-}
-
 // ============================================
 // DASHBOARD — solo slogan, niente dati
 // ============================================
-function caricaDashboard() {
-  // niente da caricare, la dashboard è solo la schermata idle
+function caricaDashboard() {}
+
+// ============================================
+// RIEPILOGO — arriva dal telefono, si chiude da solo dopo 15s
+// ============================================
+let _riepilogoTimer = null;
+
+function mostraRiepilogo(capi) {
+  if (_riepilogoTimer) clearTimeout(_riepilogoTimer);
+  const totale = capi.reduce((s,c) => s + parseFloat(c.Prezzo||0), 0);
+  document.getElementById('riepilogoSub').textContent =
+    capi.length + (capi.length === 1 ? ' capo venduto' : ' capi venduti');
+  document.getElementById('riepilogoLista').innerHTML = capi.map(c => `
+    <div class="riepilogo-row">
+      <div>
+        <div class="riepilogo-nome">${c.Nome}</div>
+        <div class="riepilogo-det">${[c.Taglia, c.Colore].filter(Boolean).join(' · ')}</div>
+      </div>
+      <div class="riepilogo-prezzo">€ ${c.Prezzo}</div>
+    </div>
+  `).join('');
+  document.getElementById('riepilogoTotale').textContent = '€ ' + totale.toFixed(2);
+
+  // Barra progressiva 15s
+  const bar = document.getElementById('riepilogoBar');
+  if (bar) {
+    bar.style.transition = 'none';
+    bar.style.width = '100%';
+    setTimeout(() => { bar.style.transition = 'width 15s linear'; bar.style.width = '0%'; }, 60);
+  }
+
+  document.getElementById('riepilogoModal').style.display = 'flex';
+  _riepilogoTimer = setTimeout(() => chiudiRiepilogo(), 15000);
+}
+
+function chiudiRiepilogo() {
+  if (_riepilogoTimer) { clearTimeout(_riepilogoTimer); _riepilogoTimer = null; }
+  document.getElementById('riepilogoModal').style.display = 'none';
 }
 
 // ============================================
