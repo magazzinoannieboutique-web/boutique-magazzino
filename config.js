@@ -7,7 +7,7 @@ const CONFIG = {
   APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbz4ESzBiqfVcqtYtNqAP4_K7H4iERpqqFloHcKlOjrpUIDJGpaQpMD9pVtTgWv1akuE/exec',
 
   // Cloudinary — inserisci dopo aver creato l'account
-  CLOUDINARY_CLOUD_NAME:    'INCOLLA_QUI_IL_TUO_CLOUD_NAME',   // es. 'dxyz1234ab'
+  CLOUDINARY_CLOUD_NAME:    'dbsrurs8j',   // es. 'dxyz1234ab'
   CLOUDINARY_UPLOAD_PRESET: 'boutique',                         // il nome del preset che hai creato
 
   // Generali
