@@ -250,8 +250,8 @@
 
       <!-- VENDITA MULTIPLA -->
       <div id="azioniMultipla" class="azioni" style="display:none;">
-        <button class="btn btn-primary" onclick="aggiungiACarrello()">➕ Aggiungi al carrello</button>
-        <button class="btn btn-ghost"   onclick="rescan()">↩ Scansiona ancora</button>
+        <div style="font-size:12px; color:var(--c3); text-align:center; padding:4px 0;">Scansiona il prossimo capo</div>
+        <button class="btn btn-ghost" onclick="rescan()">↩ Annulla</button>
       </div>
 
       <!-- INVENTARIO -->
@@ -338,6 +338,11 @@
     document.querySelectorAll('.vtab-btn').forEach(b => b.classList.toggle('active', b.dataset.vtab === t));
     if (prodottoCorrente) mostraRisultato(prodottoCorrente);
     aggiornaCarrelloArea();
+    // In multipla avvia subito lo scanner se non è già attivo
+    if (t === 'multipla') {
+      const btn = document.getElementById('btnAvvia');
+      if (btn.style.display !== 'none') setTimeout(() => avviaScanner(), 100);
+    }
   }
 
   // ── SCANNER ───────────────────────────────────────
@@ -361,6 +366,16 @@
     if (now - ultimoScanTs < COOLDOWN_MS) return;
     ultimoScanTs = now;
     bip();
+
+    if (mode === 'vendita' && vtab === 'multipla') {
+      // Multipla: aggiungi SKU in cache senza fermare lo scanner né chiamare il db
+      if (carrello.find(c => c.SKU === qrCode)) return; // anti-duplicato
+      carrello.push({ SKU: qrCode, Nome: '…', Prezzo: '—', Taglia: '', Colore: '' });
+      aggiornaCarrelloArea();
+      return; // scanner rimane attivo
+    }
+
+    // Singola / inventario / check: ferma scanner e risolvi il prodotto
     await scanner.stop();
 
     const [, p] = await Promise.all([
@@ -421,33 +436,38 @@
   }
 
   // ── VENDITA MULTIPLA ──────────────────────────────
-  function aggiungiACarrello() {
-    if (!prodottoCorrente) return;
-    carrello.push({ ...prodottoCorrente });
-    aggiornaCarrelloArea();
-    document.getElementById('resultCard').classList.remove('show');
-    setTimeout(() => avviaScanner(), 250);
-  }
+  // aggiungiACarrello non viene più usato (la scansione fa tutto)
+  // ma lo lasciamo per sicurezza
 
   function aggiornaCarrelloArea() {
     const area = document.getElementById('carrelloArea');
     const show = carrello.length > 0 && vtab === 'multipla' && mode === 'vendita';
     area.style.display = show ? 'flex' : 'none';
     if (!show) return;
-    const totale = carrello.reduce((s,c) => s + parseFloat(c.Prezzo||0), 0);
-    document.getElementById('carrelloTotale').textContent = '€ ' + totale.toFixed(2);
-    document.getElementById('carrelloLista').innerHTML = carrello.map((c,i) => `
+
+    document.getElementById('carrelloLista').innerHTML = carrello.map((c, i) => `
       <div class="ci">
-        <div><div class="ci-nome">${c.Nome}</div><div class="ci-det">${[c.Taglia,c.Colore].filter(Boolean).join(' · ')}</div></div>
+        <div>
+          <div class="ci-nome">${c.Nome === '…' ? `<span style="color:var(--c3);font-size:11px;font-family:monospace;">${c.SKU}</span>` : c.Nome}</div>
+          ${c.Nome !== '…' ? `<div class="ci-det">${[c.Taglia, c.Colore].filter(Boolean).join(' · ')}</div>` : '<div class="ci-det" style="color:var(--c3);">in attesa…</div>'}
+        </div>
         <div class="ci-right">
-          <div class="ci-prezzo">€ ${c.Prezzo}</div>
+          ${c.Prezzo !== '—' ? `<div class="ci-prezzo">€ ${c.Prezzo}</div>` : ''}
           <button class="ci-rm" onclick="rimuoviDaCarrello(${i})">✕</button>
         </div>
       </div>
     `).join('');
+
+    // Totale solo sui prodotti già risolti
+    const risolti = carrello.filter(c => c.Prezzo !== '—');
+    const tot = risolti.reduce((s, c) => s + parseFloat(c.Prezzo||0), 0);
+    document.getElementById('carrelloTotale').textContent =
+      risolti.length < carrello.length
+        ? `${risolti.length}/${carrello.length} · € ${tot.toFixed(2)}`
+        : `€ ${tot.toFixed(2)}`;
   }
 
-  function rimuoviDaCarrello(i) { carrello.splice(i,1); aggiornaCarrelloArea(); }
+  function rimuoviDaCarrello(i) { carrello.splice(i, 1); aggiornaCarrelloArea(); }
 
   function svuotaCarrello() {
     if (confirm('Svuotare il carrello?')) { carrello = []; aggiornaCarrelloArea(); }
@@ -456,18 +476,34 @@
   async function chiudiVenditaMultipla() {
     if (!carrello.length) return;
     const btn = document.getElementById('btnChiudiMultipla');
-    btn.disabled = true; btn.textContent = '⏳ Invio...';
+    btn.disabled = true; btn.textContent = '⏳ Chiusura...';
+
+    // Ferma lo scanner
+    try { await scanner.stop(); } catch(e) {}
+
+    // Risolvi tutti gli SKU dal db + vendi in parallelo
     const risultati = [];
-    for (const capo of carrello) {
-      const res = await jsonp({ action: 'vendiProdotto', sku: capo.SKU });
-      if (res.success) risultati.push(capo);
+    await Promise.all(carrello.map(async (c) => {
+      const p = await jsonp({ action: 'getProdotto', sku: c.SKU });
+      if (p.error) return;
+      const res = await jsonp({ action: 'vendiProdotto', sku: c.SKU });
+      if (res.success) risultati.push(p);
+    }));
+
+    // Manda riepilogo al PC
+    if (risultati.length) {
+      await jsonp({ action: 'setRiepilogo', capi: JSON.stringify(risultati) });
     }
-    await jsonp({ action: 'setRiepilogo', capi: JSON.stringify(risultati) });
+
     carrello = [];
     aggiornaCarrelloArea();
     btn.disabled = false; btn.textContent = '🏁 Chiudi vendita';
-    const totale = risultati.reduce((s,c) => s + parseFloat(c.Prezzo||0), 0);
-    mostraFeedback('✅', risultati.length + ' capi venduti', '€ ' + totale.toFixed(2));
+    const totale = risultati.reduce((s, c) => s + parseFloat(c.Prezzo||0), 0);
+    mostraFeedback(
+      risultati.length ? '✅' : '❌',
+      risultati.length ? risultati.length + ' capi venduti' : 'Nessuna vendita registrata',
+      risultati.length ? '€ ' + totale.toFixed(2) : ''
+    );
   }
 
   // ── INVENTARIO ────────────────────────────────────
