@@ -4,443 +4,267 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Scanner</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
+  <script src="https://upload-widget.cloudinary.com/global/all.js"></script>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    body { background:#0f0f0f; color:white; min-height:100vh; font-family:'DM Sans',system-ui,sans-serif; }
+    .wrap { max-width:420px; margin:0 auto; padding:20px; }
 
-    :root {
-      --font: 'DM Sans', system-ui, sans-serif;
-    }
+    .header { font-size:16px; font-weight:600; margin-bottom:20px; display:flex; align-items:center; gap:8px; }
+    .dot { width:9px; height:9px; border-radius:50%; background:#5b87a0; display:inline-block; }
 
-    body {
-      background: #0f0f0f;
-      color: white;
-      min-height: 100vh;
-      font-family: var(--font);
-    }
+    .mode-bar { display:flex; gap:8px; margin-bottom:20px; background:#1a1a1a; padding:6px; border-radius:12px; }
+    .mode-btn { flex:1; padding:10px; border:none; border-radius:8px; font-size:13px; font-weight:500;
+      cursor:pointer; background:transparent; color:#888; font-family:inherit; transition:all 0.15s; }
+    .mode-btn.active { background:white; color:#0f0f0f; }
 
-    .scan-wrap { max-width: 420px; margin: 0 auto; padding: 20px; }
+    #reader { border-radius:14px; overflow:hidden; background:#1a1a1a; }
 
-    .mode-bar {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 20px;
-      background: #1a1a1a;
-      padding: 6px;
-      border-radius: 12px;
+    /* Tasto avvia */
+    .start-btn {
+      width:100%; padding:20px; background:#5b87a0; color:white; border:none;
+      border-radius:14px; font-size:16px; font-weight:600; cursor:pointer;
+      font-family:inherit; letter-spacing:0.3px; transition:opacity 0.15s;
     }
-    .mode-btn {
-      flex: 1;
-      padding: 10px;
-      border: none;
-      border-radius: 8px;
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      background: transparent;
-      color: #888;
-      font-family: var(--font);
-      transition: all 0.15s;
-    }
-    .mode-btn.active { background: white; color: #0f0f0f; }
+    .start-btn:hover { opacity:0.9; }
 
-    #reader {
-      border-radius: 14px;
-      overflow: hidden;
-      background: #1a1a1a;
-    }
+    /* Card risultato */
+    .result-card { background:#1a1a1a; border-radius:14px; padding:20px; margin-top:16px; display:none; }
+    .result-card.show { display:block; }
 
-    .result-card {
-      background: #1a1a1a;
-      border-radius: 14px;
-      padding: 20px;
-      margin-top: 16px;
-      display: none;
-    }
-    .result-card.show { display: block; }
+    .r-speciale { display:inline-block; background:#3d1f00; color:#f0a070; font-size:12px;
+      padding:3px 10px; border-radius:20px; margin-bottom:10px; }
+    .r-foto { width:100%; aspect-ratio:3/2; object-fit:cover; border-radius:10px; margin-bottom:14px; background:#111; }
+    .r-nome   { font-size:20px; font-weight:600; margin-bottom:4px; }
+    .r-sub    { color:#888; font-size:14px; }
+    .r-prezzo { font-size:24px; font-weight:600; margin:10px 0; color:#5b87a0; }
+    .r-stock  { font-size:14px; color:#aaa; }
 
-    .result-nome { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
-    .result-sub { color: #888; font-size: 14px; }
-    .result-prezzo { font-size: 24px; font-weight: 600; margin: 12px 0; }
-    .result-stock { font-size: 14px; color: #aaa; }
+    .divider  { height:1px; background:#2a2a2a; margin:14px 0; }
 
-    .result-foto {
-      width: 100%;
-      aspect-ratio: 3/2;
-      object-fit: cover;
-      border-radius: 10px;
-      margin-bottom: 14px;
-      background: #111;
-    }
+    .action-btn { width:100%; padding:14px; border:none; border-radius:10px; font-size:15px;
+      font-weight:600; cursor:pointer; font-family:inherit; margin-top:10px; transition:opacity 0.15s; }
+    .action-btn:hover { opacity:0.85; }
+    .btn-sell  { background:white; color:#0f0f0f; }
+    .btn-save  { background:#5b87a0; color:white; }
+    .btn-foto  { background:#2a2a2a; color:white; border:1px solid #444; }
+    .btn-foto.uploaded { background:#1a3a2a; color:#6fcf97; border-color:#2d6a4f; }
+    .btn-again { background:#2a2a2a; color:#aaa; }
 
-    .action-btn {
-      width: 100%;
-      padding: 14px;
-      border: none;
-      border-radius: 10px;
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-      font-family: var(--font);
-      margin-top: 10px;
-      transition: opacity 0.15s;
-    }
-    .action-btn:hover { opacity: 0.85; }
-    .btn-vendi    { background: white; color: #0f0f0f; }
-    .btn-foto     { background: #2a2a2a; color: white; border: 1px solid #444; }
-    .btn-foto.uploaded { background: #1a3a2a; color: #6fcf97; border-color: #2d6a4f; }
-    .btn-inventario { background: #2d6a4f; color: white; }
-    .btn-rescan   { background: #2a2a2a; color: white; }
+    .qty-wrap  { display:flex; align-items:center; gap:12px; margin:12px 0; }
+    .qty-btn   { width:40px; height:40px; border:1px solid #333; background:#2a2a2a; color:white;
+      border-radius:8px; font-size:20px; cursor:pointer; font-family:inherit; }
+    .qty-val   { font-size:22px; font-weight:600; min-width:40px; text-align:center; }
 
-    .qty-wrap { display: flex; align-items: center; gap: 12px; margin: 14px 0; }
-    .qty-btn {
-      width: 40px; height: 40px;
-      border: 1px solid #333;
-      background: #2a2a2a;
-      color: white;
-      border-radius: 8px;
-      font-size: 20px;
-      cursor: pointer;
-      font-family: var(--font);
-    }
-    .qty-val { font-size: 22px; font-weight: 600; min-width: 40px; text-align: center; }
+    .foto-preview { display:none; margin-top:10px; }
+    .foto-preview img { width:100%; border-radius:10px; max-height:200px; object-fit:cover; }
 
-    .speciale-badge {
-      display: inline-block;
-      background: #3d1f00;
-      color: #f0a070;
-      font-size: 12px;
-      padding: 3px 10px;
-      border-radius: 20px;
-      margin-bottom: 10px;
-    }
-
-    .feedback {
-      text-align: center;
-      padding: 40px 20px;
-      display: none;
-    }
-    .feedback.show { display: block; }
-    .feedback-icon { font-size: 56px; margin-bottom: 12px; }
-    .feedback-testo { font-size: 18px; font-weight: 600; }
-    .feedback-sub { color: #888; font-size: 14px; margin-top: 4px; }
-
-    .divider {
-      height: 1px;
-      background: #2a2a2a;
-      margin: 14px 0;
-    }
-
-    .foto-preview-wrap {
-      display: none;
-      margin-top: 10px;
-    }
-    .foto-preview-wrap img {
-      width: 100%;
-      border-radius: 10px;
-      object-fit: cover;
-      max-height: 200px;
-    }
+    /* Feedback */
+    .feedback { text-align:center; padding:48px 20px; display:none; }
+    .feedback.show { display:block; }
+    .fb-icon  { font-size:60px; margin-bottom:14px; }
+    .fb-testo { font-size:18px; font-weight:600; }
+    .fb-sub   { color:#888; font-size:14px; margin-top:6px; }
   </style>
 </head>
 <body>
-<div class="scan-wrap">
+<div class="wrap">
 
-  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
-    <div style="font-size:16px; font-weight:600;">📱 Scanner</div>
-  </div>
+  <div class="header"><span class="dot"></span> Scanner</div>
 
-  <!-- Selezione modalità -->
   <div class="mode-bar">
     <button class="mode-btn active" data-mode="vendita"    onclick="setMode('vendita')">🛍️ Vendita</button>
     <button class="mode-btn"        data-mode="inventario" onclick="setMode('inventario')">📦 Inventario</button>
     <button class="mode-btn"        data-mode="check"      onclick="setMode('check')">🔍 Check</button>
   </div>
 
-  <!-- Scanner camera -->
-  <div id="readerWrap">
-    <button class="action-btn btn-vendi" id="btnAvvia" onclick="avviaScanner()" style="margin-bottom:16px; font-size:16px; padding:18px;">
-      📷 Avvia scanner
-    </button>
-  </div>
+  <!-- Tasto avvia -->
+  <button class="start-btn" id="btnAvvia" onclick="avviaScanner()">📷 Avvia scanner</button>
+
+  <!-- Viewport camera -->
   <div id="reader"></div>
 
   <!-- Feedback -->
-  <div class="feedback" id="feedbackOk">
-    <div class="feedback-icon" id="fbIcon">✅</div>
-    <div class="feedback-testo" id="fbTesto"></div>
-    <div class="feedback-sub" id="fbSub"></div>
-    <button class="action-btn btn-rescan" style="margin-top:20px;" onclick="rescan()">Scansiona ancora</button>
+  <div class="feedback" id="feedback">
+    <div class="fb-icon"  id="fbIcon"></div>
+    <div class="fb-testo" id="fbTesto"></div>
+    <div class="fb-sub"   id="fbSub"></div>
+    <button class="action-btn btn-again" style="margin-top:24px;" onclick="rescan()">↩ Scansiona ancora</button>
   </div>
 
-  <!-- Card risultato -->
+  <!-- Card prodotto -->
   <div class="result-card" id="resultCard">
+    <div id="rSpeciale" class="r-speciale" style="display:none;">✂️ Modifica speciale</div>
+    <img id="rFoto" class="r-foto" src="" alt="" style="display:none;">
+    <div class="r-nome"   id="rNome"></div>
+    <div class="r-sub"    id="rSub"></div>
+    <div class="r-prezzo" id="rPrezzo"></div>
+    <div class="r-stock"  id="rStock"></div>
 
-    <div id="rSpeciale" class="speciale-badge" style="display:none;">✂️ Modifica speciale</div>
-    <img id="rFoto" class="result-foto" src="" alt="" style="display:none;">
-    <div class="result-nome" id="rNome"></div>
-    <div class="result-sub"  id="rSub"></div>
-    <div class="result-prezzo" id="rPrezzo"></div>
-    <div class="result-stock"  id="rStock"></div>
-
-    <!-- MODALITÀ VENDITA -->
+    <!-- Vendita -->
     <div id="azioniVendita">
-      <button class="action-btn btn-vendi"  onclick="eseguiVendita()">✅ Segna come venduto</button>
-      <button class="action-btn btn-rescan" onclick="rescan()">↩ Scansiona ancora</button>
+      <button class="action-btn btn-sell"  onclick="eseguiVendita()">✅ Segna come venduto</button>
+      <button class="action-btn btn-again" onclick="rescan()">↩ Scansiona ancora</button>
     </div>
 
-    <!-- MODALITÀ INVENTARIO -->
+    <!-- Inventario -->
     <div id="azioniInventario" style="display:none;">
-      <div style="font-size:13px; color:#888; margin-top:12px;">Aggiorna quantità:</div>
+      <div class="divider"></div>
+      <div style="font-size:13px; color:#888;">Quantità in magazzino:</div>
       <div class="qty-wrap">
         <button class="qty-btn" onclick="cambiaQty(-1)">−</button>
         <span class="qty-val" id="qtyVal">0</span>
-        <button class="qty-btn" onclick="cambiaQty(1)">+</button>
+        <button class="qty-btn" onclick="cambiaQty(+1)">+</button>
       </div>
-
-      <div class="divider"></div>
-
-      <!-- Foto da inventario -->
-      <div style="font-size:13px; color:#888; margin-bottom:8px;">Foto articolo:</div>
-      <button class="action-btn btn-foto" id="btnFoto" onclick="apriCloudinaryScanner()">
-        📷 Aggiungi / Cambia foto
-      </button>
-      <div class="foto-preview-wrap" id="fotoPreviewWrap">
-        <img id="fotoPreviewImg" src="" alt="Preview foto">
-        <div style="font-size:12px; color:#6fcf97; margin-top:6px; text-align:center;">✅ Foto caricata</div>
-      </div>
+      <button class="action-btn btn-foto" id="btnFoto" onclick="apriCloudinary()">📷 Aggiungi / Cambia foto</button>
+      <div class="foto-preview" id="fotoPreview"><img id="fotoPreviewImg" src="" alt=""></div>
       <input type="hidden" id="nuovaFotoUrl">
-
       <div class="divider"></div>
-
-      <button class="action-btn btn-inventario" onclick="salvaQuantita()">💾 Salva tutto</button>
-      <button class="action-btn btn-rescan"     onclick="rescan()">↩ Scansiona ancora</button>
+      <button class="action-btn btn-save"  onclick="salvaInventario()">💾 Salva</button>
+      <button class="action-btn btn-again" onclick="rescan()">↩ Scansiona ancora</button>
     </div>
 
-    <!-- MODALITÀ CHECK -->
+    <!-- Check -->
     <div id="azioniCheck">
-      <button class="action-btn btn-rescan" onclick="rescan()">↩ Scansiona ancora</button>
+      <button class="action-btn btn-again" onclick="rescan()">↩ Scansiona ancora</button>
     </div>
-
   </div>
 
 </div>
 
 <script src="config.js"></script>
 <script>
-  let mode = 'vendita';
-  let varianteCorrente = null;
-  let qtyCorrente = 0;
+  let mode    = 'vendita';
   let scanner = null;
-  let nuovaFotoUrl = null;
+  let prodottoCorrente = null;
+  let qtyCorrente      = 0;
 
-  // ============================================
-  // AVVIA SCANNER
-  // ============================================
   window.addEventListener('load', () => {
     scanner = new Html5Qrcode('reader');
-    // Scanner non parte automaticamente — aspetta il tasto
   });
 
   function avviaScanner() {
     document.getElementById('btnAvvia').style.display = 'none';
+    document.getElementById('feedback').classList.remove('show');
+    document.getElementById('resultCard').classList.remove('show');
     scanner.start(
       { facingMode: 'environment' },
       { fps: 10, qrbox: { width: 240, height: 240 } },
-      onScanSuccess,
-      () => {}
+      onScan, () => {}
     ).catch(err => {
       document.getElementById('reader').innerHTML =
-        '<div style="padding:40px; text-align:center; color:#888;">⚠️ Fotocamera non accessibile.<br><small>' + err + '</small></div>';
+        `<div style="padding:40px;text-align:center;color:#888;">⚠️ Fotocamera non accessibile.<br><small>${err}</small></div>`;
     });
   }
 
-  // ============================================
-  // ON SCAN
-  // ============================================
-  async function onScanSuccess(qrCode) {
+  async function onScan(qrCode) {
     await scanner.stop();
 
-    // Notifica il portale
-    await fetch(CONFIG.APPS_SCRIPT_URL, {
+    // Notifica portale
+    fetch(CONFIG.APPS_SCRIPT_URL, {
       method: 'POST',
-      body: JSON.stringify({ action: 'setScanResult', id_variante: qrCode })
+      body: JSON.stringify({ action: 'setScanResult', sku: qrCode })
     });
 
-    // Carica dati variante
-    const url = CONFIG.APPS_SCRIPT_URL + '?action=getVariante&id=' + encodeURIComponent(qrCode);
-    const res = await fetch(url);
-    const v = await res.json();
+    const res = await fetch(CONFIG.APPS_SCRIPT_URL + '?action=getProdotto&sku=' + encodeURIComponent(qrCode));
+    const p   = await res.json();
 
-    if (v.error) {
-      mostraFeedback('❌', 'Articolo non trovato', qrCode);
-      return;
-    }
+    if (p.error) { mostraFeedback('❌', 'Prodotto non trovato', qrCode); return; }
 
-    varianteCorrente = v;
-    qtyCorrente = parseInt(v.Quantità) || 0;
-    nuovaFotoUrl = null;
-    mostraRisultato(v);
+    prodottoCorrente = p;
+    qtyCorrente      = parseInt(p.Quantità) || 0;
+    mostraRisultato(p);
   }
 
-  // ============================================
-  // MOSTRA RISULTATO
-  // ============================================
-  function mostraRisultato(v) {
-    document.getElementById('feedbackOk').classList.remove('show');
+  function mostraRisultato(p) {
+    document.getElementById('feedback').classList.remove('show');
     document.getElementById('resultCard').classList.add('show');
 
-    const speciale = v.Speciale === 'SI' || v.Speciale_Articolo === 'SI';
-    document.getElementById('rSpeciale').style.display = speciale ? 'inline-block' : 'none';
-    document.getElementById('rNome').textContent    = v.Nome || v.SKU;
-    document.getElementById('rSub').textContent     = `${v.Taglia} · ${v.Colore} · ${v.Brand || ''}`;
-    document.getElementById('rPrezzo').textContent  = '€ ' + (v.Prezzo || '—');
-    document.getElementById('rStock').textContent   = `In magazzino: ${v.Quantità} pz`;
+    document.getElementById('rSpeciale').style.display = p.Speciale === 'SI' ? 'inline-block' : 'none';
+    document.getElementById('rNome').textContent   = p.Nome;
+    document.getElementById('rSub').textContent    = `${p.Taglia} · ${p.Colore} · ${p.Brand || ''}`;
+    document.getElementById('rPrezzo').textContent = '€ ' + p.Prezzo;
+    document.getElementById('rStock').textContent  = `In magazzino: ${p.Quantità} pz`;
 
-    if (v.Foto_URL) {
-      document.getElementById('rFoto').src = v.Foto_URL;
-      document.getElementById('rFoto').style.display = 'block';
-    } else {
-      document.getElementById('rFoto').style.display = 'none';
-    }
+    const rFoto = document.getElementById('rFoto');
+    if (p.Foto_URL) { rFoto.src = p.Foto_URL; rFoto.style.display = 'block'; }
+    else              { rFoto.style.display = 'none'; }
 
-    // Reset foto upload UI
+    // Reset foto upload
     document.getElementById('nuovaFotoUrl').value = '';
-    document.getElementById('fotoPreviewWrap').style.display = 'none';
-    document.getElementById('btnFoto').classList.remove('uploaded');
+    document.getElementById('fotoPreview').style.display = 'none';
+    document.getElementById('btnFoto').className = 'action-btn btn-foto';
     document.getElementById('btnFoto').textContent = '📷 Aggiungi / Cambia foto';
+    document.getElementById('qtyVal').textContent = qtyCorrente;
 
-    // Mostra azioni per modalità corrente
     document.getElementById('azioniVendita').style.display    = mode === 'vendita'    ? 'block' : 'none';
     document.getElementById('azioniInventario').style.display = mode === 'inventario' ? 'block' : 'none';
     document.getElementById('azioniCheck').style.display      = mode === 'check'      ? 'block' : 'none';
-    document.getElementById('qtyVal').textContent = qtyCorrente;
   }
 
-  // ============================================
-  // CLOUDINARY — apri dal telefono
-  // ============================================
-  function apriCloudinaryScanner() {
-    const widget = cloudinary.createUploadWidget(
-      {
-        cloudName: CONFIG.CLOUDINARY_CLOUD_NAME,
-        uploadPreset: CONFIG.CLOUDINARY_UPLOAD_PRESET,
-        sources: ['camera', 'local'],  // camera prima per mobile
-        multiple: false,
-        maxFileSize: 5000000,
-        transformation: [{ width: 800, crop: 'limit', quality: 'auto' }],
-      },
-      (error, result) => {
-        if (!error && result && result.event === 'success') {
-          nuovaFotoUrl = result.info.secure_url;
-          document.getElementById('nuovaFotoUrl').value = nuovaFotoUrl;
-
-          // Aggiorna UI
-          document.getElementById('fotoPreviewImg').src = nuovaFotoUrl;
-          document.getElementById('fotoPreviewWrap').style.display = 'block';
-          document.getElementById('btnFoto').classList.add('uploaded');
-          document.getElementById('btnFoto').textContent = '✅ Foto caricata — cambia';
-
-          // Aggiorna anche la foto in alto nella card
-          document.getElementById('rFoto').src = nuovaFotoUrl;
-          document.getElementById('rFoto').style.display = 'block';
-        }
-      }
-    );
-    widget.open();
-  }
-
-  // ============================================
-  // VENDITA
-  // ============================================
   async function eseguiVendita() {
-    const res = await fetch(CONFIG.APPS_SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'vendiVariante', id_variante: varianteCorrente.ID_Variante })
-    });
+    const res  = await fetch(CONFIG.APPS_SCRIPT_URL, { method:'POST', body: JSON.stringify({ action:'vendiProdotto', sku: prodottoCorrente.SKU }) });
     const data = await res.json();
-    if (data.success) {
-      mostraFeedback('✅', 'Vendita registrata!',
-        `${varianteCorrente.Nome} · ${varianteCorrente.Taglia} ${varianteCorrente.Colore}`);
-    } else {
-      mostraFeedback('❌', data.error || 'Errore', '');
-    }
+    if (data.success) mostraFeedback('✅', 'Vendita registrata!', `${prodottoCorrente.Nome} · ${prodottoCorrente.Taglia} ${prodottoCorrente.Colore}`);
+    else              mostraFeedback('❌', data.error || 'Errore', '');
   }
 
-  // ============================================
-  // INVENTARIO — salva quantità + eventuale foto
-  // ============================================
   function cambiaQty(delta) {
     qtyCorrente = Math.max(0, qtyCorrente + delta);
     document.getElementById('qtyVal').textContent = qtyCorrente;
   }
 
-  async function salvaQuantita() {
-    // Salva quantità
-    const resQty = await fetch(CONFIG.APPS_SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify({
-        action: 'aggiornaQuantita',
-        id_variante: varianteCorrente.ID_Variante,
-        quantita: qtyCorrente
-      })
-    });
-    const dataQty = await resQty.json();
-    if (!dataQty.success) {
-      mostraFeedback('❌', dataQty.error || 'Errore quantità', '');
-      return;
+  async function salvaInventario() {
+    await fetch(CONFIG.APPS_SCRIPT_URL, { method:'POST', body: JSON.stringify({ action:'aggiornaQuantita', sku: prodottoCorrente.SKU, quantita: qtyCorrente }) });
+    const fotoUrl = document.getElementById('nuovaFotoUrl').value;
+    if (fotoUrl) {
+      await fetch(CONFIG.APPS_SCRIPT_URL, { method:'POST', body: JSON.stringify({ action:'aggiornaFoto', sku: prodottoCorrente.SKU, foto_url: fotoUrl }) });
     }
-
-    // Se c'è una nuova foto, salva anche quella
-    if (nuovaFotoUrl) {
-      await fetch(CONFIG.APPS_SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify({
-          action: 'aggiorneFoto',
-          sku: varianteCorrente.SKU,
-          foto_url: nuovaFotoUrl
-        })
-      });
-    }
-
-    const fotoMsg = nuovaFotoUrl ? ' + foto aggiornata' : '';
-    mostraFeedback('💾', 'Salvato!',
-      `${varianteCorrente.Nome} · ${varianteCorrente.Taglia} → ${qtyCorrente} pz${fotoMsg}`);
+    mostraFeedback('💾', 'Salvato!', `${prodottoCorrente.Nome} · ${prodottoCorrente.Taglia} → ${qtyCorrente} pz${fotoUrl ? ' + foto' : ''}`);
   }
 
-  // ============================================
-  // FEEDBACK + RESCAN
-  // ============================================
+  function apriCloudinary() {
+    const widget = cloudinary.createUploadWidget({
+      cloudName: CONFIG.CLOUDINARY_CLOUD_NAME, uploadPreset: CONFIG.CLOUDINARY_UPLOAD_PRESET,
+      sources: ['camera','local'], multiple: false, maxFileSize: 5000000,
+      transformation: [{ width:800, crop:'limit', quality:'auto' }],
+    }, (error, result) => {
+      if (!error && result && result.event === 'success') {
+        const url = result.info.secure_url;
+        document.getElementById('nuovaFotoUrl').value = url;
+        document.getElementById('fotoPreviewImg').src = url;
+        document.getElementById('fotoPreview').style.display = 'block';
+        document.getElementById('rFoto').src = url;
+        document.getElementById('rFoto').style.display = 'block';
+        const btn = document.getElementById('btnFoto');
+        btn.className = 'action-btn btn-foto uploaded';
+        btn.textContent = '✅ Foto caricata';
+      }
+    });
+    widget.open();
+  }
+
   function mostraFeedback(icon, testo, sub) {
     document.getElementById('resultCard').classList.remove('show');
     document.getElementById('fbIcon').textContent  = icon;
     document.getElementById('fbTesto').textContent = testo;
     document.getElementById('fbSub').textContent   = sub;
-    document.getElementById('feedbackOk').classList.add('show');
+    document.getElementById('feedback').classList.add('show');
   }
 
   function rescan() {
-    varianteCorrente = null;
-    nuovaFotoUrl = null;
+    prodottoCorrente = null;
     document.getElementById('resultCard').classList.remove('show');
-    document.getElementById('feedbackOk').classList.remove('show');
+    document.getElementById('feedback').classList.remove('show');
     document.getElementById('btnAvvia').style.display = 'block';
-    avviaScanner();
   }
 
-  // ============================================
-  // MODALITÀ
-  // ============================================
   function setMode(m) {
     mode = m;
-    document.querySelectorAll('.mode-btn').forEach(b => {
-      b.classList.toggle('active', b.dataset.mode === m);
-    });
-    // Se c'è già una variante caricata, aggiorna le azioni visibili
-    if (varianteCorrente) mostraRisultato(varianteCorrente);
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
+    if (prodottoCorrente) mostraRisultato(prodottoCorrente);
   }
 </script>
 </body>

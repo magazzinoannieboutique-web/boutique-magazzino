@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Boutique — Magazzino</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
 </head>
@@ -26,26 +26,24 @@
 
 <main class="container">
 
-  <!-- ===== SCAN ATTIVO (appare quando arriva una scansione) ===== -->
+  <!-- ===== SCAN BANNER ===== -->
   <div id="scanBanner" style="display:none; margin-bottom:24px;">
-    <div class="card" id="scanCard" style="border-left: 4px solid #1a1a1a;">
+    <div class="card" style="border-left: 4px solid var(--accent);">
       <div style="display:flex; gap:16px; align-items:flex-start;">
-        <div id="scanFoto" style="width:80px; height:100px; background:#fafafa; border-radius:8px; overflow:hidden; flex-shrink:0; display:flex; align-items:center; justify-content:center; color:#888; font-size:12px;">
-          No foto
-        </div>
+        <div id="scanFoto" style="width:80px; height:100px; background:#fafafa; border-radius:8px; overflow:hidden; flex-shrink:0; display:flex; align-items:center; justify-content:center; color:#888; font-size:12px;">No foto</div>
         <div style="flex:1;">
           <div style="display:flex; gap:8px; align-items:center; margin-bottom:4px;">
             <span style="font-size:11px; font-weight:500; color:#888; text-transform:uppercase; letter-spacing:0.5px;">📱 Scansione attiva</span>
             <span id="scanSpeciale" style="display:none;" class="badge badge-speciale">✂️ Speciale</span>
           </div>
-          <div id="scanNome" style="font-size:18px; font-weight:600;"></div>
+          <div id="scanNome"     style="font-size:18px; font-weight:600;"></div>
           <div id="scanDettagli" style="color:#888; font-size:13px; margin-top:2px;"></div>
-          <div id="scanPrezzo" style="font-size:20px; font-weight:600; margin-top:6px;"></div>
-          <div id="scanStock" style="font-size:13px; color:#888; margin-top:2px;"></div>
+          <div id="scanPrezzo"   style="font-size:20px; font-weight:600; margin-top:6px;"></div>
+          <div id="scanStock"    style="font-size:13px; color:#888; margin-top:2px;"></div>
         </div>
         <div style="display:flex; flex-direction:column; gap:8px; align-items:flex-end;">
           <button class="btn btn-success" onclick="vendiDaPortale()">✅ Segna venduto</button>
-          <button class="btn btn-ghost" onclick="chiudiScan()">✕ Ignora</button>
+          <button class="btn btn-ghost"   onclick="chiudiScan()">✕ Ignora</button>
         </div>
       </div>
     </div>
@@ -55,22 +53,10 @@
   <section class="section active" id="sec-dashboard">
     <h1 class="section-title">Dashboard</h1>
     <div class="stat-grid">
-      <div class="stat-card">
-        <div class="stat-label">Vendite oggi</div>
-        <div class="stat-value" id="statVenditeOggi">—</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Incasso oggi</div>
-        <div class="stat-value" id="statIncassoOggi">—</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Vendite totali</div>
-        <div class="stat-value" id="statVenditeTot">—</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Incasso totale</div>
-        <div class="stat-value" id="statIncassoTot">—</div>
-      </div>
+      <div class="stat-card"><div class="stat-label">Vendite oggi</div><div class="stat-value" id="statVenditeOggi">—</div></div>
+      <div class="stat-card"><div class="stat-label">Incasso oggi</div><div class="stat-value" id="statIncassoOggi">—</div></div>
+      <div class="stat-card"><div class="stat-label">Vendite totali</div><div class="stat-value" id="statVenditeTot">—</div></div>
+      <div class="stat-card"><div class="stat-label">Incasso totale</div><div class="stat-value" id="statIncassoTot">—</div></div>
     </div>
     <div class="card">
       <div style="font-weight:600; margin-bottom:12px;">Ultima vendita</div>
@@ -82,104 +68,83 @@
   <section class="section" id="sec-inventario">
     <h1 class="section-title">Inventario</h1>
     <div class="filtri">
-      <input class="form-input" style="max-width:220px;" id="filtroTesto" placeholder="Cerca per nome, SKU..." oninput="filtraArticoli()">
-      <select class="form-select" style="max-width:160px;" id="filtroCategoria" onchange="filtraArticoli()">
+      <input class="form-input" style="max-width:220px;" id="filtroTesto" placeholder="Cerca per nome, SKU..." oninput="filtraInventario()">
+      <select class="form-select" style="max-width:160px;" id="filtroCategoria" onchange="filtraInventario()">
         <option value="">Tutte le categorie</option>
       </select>
-      <select class="form-select" style="max-width:160px;" id="filtroSpeciale" onchange="filtraArticoli()">
+      <select class="form-select" style="max-width:160px;" id="filtroSpeciale" onchange="filtraInventario()">
         <option value="">Tutti</option>
         <option value="SI">✂️ Solo speciali</option>
       </select>
     </div>
-    <div class="card-grid" id="gridArticoli">
+    <div class="card-grid" id="gridProdotti">
       <div style="color:#888; font-size:14px;">Caricamento...</div>
     </div>
   </section>
 
-  <!-- ===== CARICA ARTICOLO ===== -->
+  <!-- ===== CARICA PRODOTTO ===== -->
   <section class="section" id="sec-carica">
-    <h1 class="section-title">Carica nuovo articolo</h1>
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px;">
+    <h1 class="section-title">Carica nuovo prodotto</h1>
+    <div class="card" style="max-width:560px;">
 
-      <div class="card">
-        <div style="font-weight:600; margin-bottom:16px;">Dati articolo</div>
-        <div id="skuGenerato" style="display:none; background:#f0f7fb; border:1px solid #c8dfe9; border-radius:8px; padding:10px 14px; font-size:13px; color:#5b87a0; font-weight:600; margin-bottom:16px;"></div>
-        <div class="form-group">
+      <div id="skuGenerato" style="display:none; background:#f0f7fb; border:1px solid #c8dfe9; border-radius:8px; padding:10px 14px; font-size:13px; color:var(--accent); font-weight:600; margin-bottom:20px;"></div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0 16px;">
+        <div class="form-group" style="grid-column:1/-1;">
           <label class="form-label">Nome *</label>
-          <input class="form-input" id="nNome" placeholder="es. Vestito Floreale">
+          <input class="form-input" id="pNome" placeholder="es. Vestito Floreale">
         </div>
         <div class="form-group">
           <label class="form-label">Categoria</label>
-          <input class="form-input" id="nCategoria" placeholder="es. Vestito, Top, Gonna...">
+          <input class="form-input" id="pCategoria" placeholder="es. Vestito, Top, Gonna">
         </div>
         <div class="form-group">
           <label class="form-label">Brand</label>
-          <input class="form-input" id="nBrand" placeholder="es. Zara">
+          <input class="form-input" id="pBrand" placeholder="es. Zara">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Taglia</label>
+          <input class="form-input" id="pTaglia" placeholder="es. S, M, L, 38">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Colore</label>
+          <input class="form-input" id="pColore" placeholder="es. Rosso, Nero, Blu">
         </div>
         <div class="form-group">
           <label class="form-label">Prezzo (€)</label>
-          <input class="form-input" id="nPrezzo" type="number" placeholder="49.90">
-        </div>
-
-        <!-- FOTO con Cloudinary -->
-        <div class="form-group">
-          <label class="form-label">Foto articolo</label>
-          <div style="display:flex; gap:10px; align-items:center;">
-            <button type="button" class="btn btn-ghost" onclick="apriCloudinary('nFoto', 'fotoPreview')">📷 Carica foto</button>
-            <span id="fotoStatus" style="font-size:13px; color:#888;">Nessuna foto caricata</span>
-          </div>
-          <input type="hidden" id="nFoto">
-          <div id="fotoPreview" style="margin-top:10px; display:none;">
-            <img src="" alt="Preview" style="width:100%; max-width:200px; border-radius:8px; border:1px solid var(--border);">
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Speciale sull'articolo</label>
-          <select class="form-select" id="nSpeciale">
-            <option value="NO">No</option>
-            <option value="SI">Sì ✂️</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Note</label>
-          <input class="form-input" id="nNote" placeholder="">
-        </div>
-        <button class="btn btn-primary" onclick="salvaArticolo()">Salva articolo</button>
-      </div>
-
-      <div class="card">
-        <div style="font-weight:600; margin-bottom:16px;">Aggiungi variante</div>
-        <div class="form-group">
-          <label class="form-label">SKU articolo *</label>
-          <input class="form-input" id="vSKU" placeholder="es. VF-001">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Taglia *</label>
-          <input class="form-input" id="vTaglia" placeholder="es. S, M, L, XL, 38...">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Colore *</label>
-          <input class="form-input" id="vColore" placeholder="es. Rosso, Blu, Nero...">
+          <input class="form-input" id="pPrezzo" type="number" placeholder="49.90">
         </div>
         <div class="form-group">
           <label class="form-label">Quantità</label>
-          <input class="form-input" id="vQuantita" type="number" value="1">
+          <input class="form-input" id="pQuantita" type="number" value="1">
         </div>
         <div class="form-group">
-          <label class="form-label">Speciale su questa variante</label>
-          <select class="form-select" id="vSpeciale">
+          <label class="form-label">Speciale</label>
+          <select class="form-select" id="pSpeciale">
             <option value="NO">No</option>
             <option value="SI">Sì ✂️</option>
           </select>
         </div>
-        <button class="btn btn-primary" onclick="salvaVariante()">Aggiungi variante</button>
-        <div style="margin-top:20px; padding-top:16px; border-top:1px solid var(--border); font-size:13px; color:#888;">
-          💡 L'ID variante verrà generato automaticamente<br>
-          es. <strong>VF-001-S-RO</strong>
+        <div class="form-group" style="grid-column:1/-1;">
+          <label class="form-label">Note</label>
+          <input class="form-input" id="pNote" placeholder="">
+        </div>
+        <div class="form-group" style="grid-column:1/-1;">
+          <label class="form-label">Foto</label>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <button type="button" class="btn btn-ghost" onclick="apriCloudinary()">📷 Carica foto</button>
+            <span id="fotoStatus" style="font-size:13px; color:#888;">Nessuna foto</span>
+          </div>
+          <input type="hidden" id="pFoto">
+          <div id="fotoPreview" style="margin-top:10px; display:none;">
+            <img src="" alt="Preview" style="max-width:160px; border-radius:8px; border:1px solid var(--border);">
+          </div>
         </div>
       </div>
 
+      <button class="btn btn-primary" style="width:100%; justify-content:center; padding:12px;" onclick="salvaProdotto()">
+        Salva prodotto
+      </button>
     </div>
   </section>
 
@@ -188,13 +153,13 @@
     <h1 class="section-title">Stampa etichette QR</h1>
     <div class="card" style="margin-bottom:20px;">
       <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-        <input class="form-input" style="max-width:220px;" id="filtroEtichettaTesto" placeholder="Cerca per nome, SKU..." oninput="filtraEtichette()">
+        <input class="form-input" style="max-width:220px;" id="filtroEtichetta" placeholder="Cerca per nome, SKU..." oninput="filtraEtichette()">
         <button class="btn btn-ghost" onclick="selezionaTutte()">Seleziona tutte</button>
-        <button class="btn btn-ghost" onclick="deselezionaTutte()">deseleziona tutte</button>
+        <button class="btn btn-ghost" onclick="deselezionaTutte()">Deseleziona tutte</button>
         <button class="btn btn-primary" onclick="stampaEtichette()">🖨️ Stampa selezionate</button>
       </div>
     </div>
-    <div id="listaEtichette" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap:12px;">
+    <div id="listaEtichette" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px,1fr)); gap:10px;">
       <div style="color:#888; font-size:14px;">Caricamento...</div>
     </div>
   </section>
@@ -207,12 +172,7 @@
         <table>
           <thead>
             <tr>
-              <th>Data</th>
-              <th>Articolo</th>
-              <th>Taglia</th>
-              <th>Colore</th>
-              <th>Prezzo</th>
-              <th>ID Vendita</th>
+              <th>Data</th><th>Prodotto</th><th>Taglia</th><th>Colore</th><th>Prezzo</th><th>ID</th>
             </tr>
           </thead>
           <tbody id="tabellaVendite">
@@ -230,51 +190,25 @@
 <script src="config.js"></script>
 <script src="app.js"></script>
 <script>
-  // ============================================
-  // CLOUDINARY UPLOAD WIDGET
-  // ============================================
-  function apriCloudinary(inputId, previewId) {
-    const widget = cloudinary.createUploadWidget(
-      {
-        cloudName: CONFIG.CLOUDINARY_CLOUD_NAME,
-        uploadPreset: CONFIG.CLOUDINARY_UPLOAD_PRESET,
-        sources: ['local', 'camera'],
-        multiple: false,
-        maxFileSize: 5000000, // 5MB max
-        transformation: [{ width: 800, crop: 'limit', quality: 'auto' }],
-        language: 'it',
-        text: {
-          it: {
-            or: 'oppure',
-            back: 'Indietro',
-            advanced: 'Avanzate',
-            close: 'Chiudi',
-            no_results: 'Nessun risultato',
-            search_placeholder: 'Cerca file...',
-            about_uw: 'Info widget',
-            menu: { files: 'I miei file', camera: 'Fotocamera' },
-            selection_counter: { image: 'Immagine selezionata' },
-            actions: { upload: 'Carica', clear_all: 'Rimuovi tutto', log_out: 'Esci' },
-            notifications: { general_error: 'Errore durante il caricamento', general_prompt: 'Sei sicuro?', limit_reached: 'Limite raggiunto' },
-            buttons: { choose: 'Scegli file', retry: 'Riprova', abort: 'Annulla' },
-            dropbox: { cancel: 'Annulla', connect: 'Connetti Dropbox', no_auth_title: 'Carica file da Dropbox', no_auth_action: 'Connetti account Dropbox' },
-          }
-        }
-      },
-      (error, result) => {
-        if (!error && result && result.event === 'success') {
-          const url = result.info.secure_url;
-          document.getElementById(inputId).value = url;
-
-          // Mostra preview
-          const preview = document.getElementById(previewId);
-          preview.style.display = 'block';
-          preview.querySelector('img').src = url;
-          document.getElementById('fotoStatus').textContent = '✅ Foto caricata';
-          document.getElementById('fotoStatus').style.color = '#2d6a4f';
-        }
+  function apriCloudinary() {
+    const widget = cloudinary.createUploadWidget({
+      cloudName:    CONFIG.CLOUDINARY_CLOUD_NAME,
+      uploadPreset: CONFIG.CLOUDINARY_UPLOAD_PRESET,
+      sources: ['local', 'camera'],
+      multiple: false,
+      maxFileSize: 5000000,
+      transformation: [{ width: 800, crop: 'limit', quality: 'auto' }],
+    }, (error, result) => {
+      if (!error && result && result.event === 'success') {
+        const url = result.info.secure_url;
+        document.getElementById('pFoto').value = url;
+        const preview = document.getElementById('fotoPreview');
+        preview.style.display = 'block';
+        preview.querySelector('img').src = url;
+        document.getElementById('fotoStatus').textContent = '✅ Foto caricata';
+        document.getElementById('fotoStatus').style.color = 'var(--success)';
       }
-    );
+    });
     widget.open();
   }
 </script>
