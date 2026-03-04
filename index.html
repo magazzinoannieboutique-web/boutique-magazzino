@@ -85,66 +85,79 @@
   <!-- ===== CARICA PRODOTTO ===== -->
   <section class="section" id="sec-carica">
     <h1 class="section-title">Carica nuovo prodotto</h1>
-    <div class="card" style="max-width:560px;">
 
-      <div id="skuGenerato" style="display:none; background:#f0f7fb; border:1px solid #c8dfe9; border-radius:8px; padding:10px 14px; font-size:13px; color:var(--accent); font-weight:600; margin-bottom:20px;"></div>
+    <div id="skuGenerato" style="display:none; background:#f0f7fb; border:1px solid #c8dfe9; border-radius:8px; padding:10px 16px; font-size:13px; color:var(--accent); font-weight:600; margin-bottom:20px;"></div>
 
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0 16px;">
-        <div class="form-group" style="grid-column:1/-1;">
+    <div style="display:grid; grid-template-columns: 2fr 1fr; gap:20px; align-items:start;">
+
+      <!-- Colonna sinistra — dati principali -->
+      <div class="card">
+        <div style="font-size:13px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:16px;">Dati prodotto</div>
+        <div class="form-group">
           <label class="form-label">Nome *</label>
           <input class="form-input" id="pNome" placeholder="es. Vestito Floreale">
         </div>
-        <div class="form-group">
-          <label class="form-label">Categoria</label>
-          <input class="form-input" id="pCategoria" placeholder="es. Vestito, Top, Gonna">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0 16px;">
+          <div class="form-group">
+            <label class="form-label">Categoria</label>
+            <input class="form-input" id="pCategoria" placeholder="es. Vestito, Top, Gonna">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Brand</label>
+            <input class="form-input" id="pBrand" placeholder="es. Zara">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Taglia</label>
+            <input class="form-input" id="pTaglia" placeholder="es. S, M, L, 38">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Colore</label>
+            <input class="form-input" id="pColore" placeholder="es. Rosso, Nero, Blu">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Prezzo (€)</label>
+            <input class="form-input" id="pPrezzo" type="number" placeholder="49.90">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Quantità</label>
+            <input class="form-input" id="pQuantita" type="number" value="1">
+          </div>
         </div>
         <div class="form-group">
-          <label class="form-label">Brand</label>
-          <input class="form-input" id="pBrand" placeholder="es. Zara">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Taglia</label>
-          <input class="form-input" id="pTaglia" placeholder="es. S, M, L, 38">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Colore</label>
-          <input class="form-input" id="pColore" placeholder="es. Rosso, Nero, Blu">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Prezzo (€)</label>
-          <input class="form-input" id="pPrezzo" type="number" placeholder="49.90">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Quantità</label>
-          <input class="form-input" id="pQuantita" type="number" value="1">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Speciale</label>
-          <select class="form-select" id="pSpeciale">
-            <option value="NO">No</option>
-            <option value="SI">Sì ✂️</option>
-          </select>
-        </div>
-        <div class="form-group" style="grid-column:1/-1;">
           <label class="form-label">Note</label>
           <input class="form-input" id="pNote" placeholder="">
         </div>
-        <div class="form-group" style="grid-column:1/-1;">
-          <label class="form-label">Foto</label>
-          <div style="display:flex; gap:10px; align-items:center;">
-            <button type="button" class="btn btn-ghost" onclick="apriCloudinary()">📷 Carica foto</button>
-            <span id="fotoStatus" style="font-size:13px; color:#888;">Nessuna foto</span>
-          </div>
-          <input type="hidden" id="pFoto">
-          <div id="fotoPreview" style="margin-top:10px; display:none;">
-            <img src="" alt="Preview" style="max-width:160px; border-radius:8px; border:1px solid var(--border);">
-          </div>
-        </div>
       </div>
 
-      <button class="btn btn-primary" style="width:100%; justify-content:center; padding:12px;" onclick="salvaProdotto()">
-        Salva prodotto
-      </button>
+      <!-- Colonna destra — foto + opzioni + salva -->
+      <div style="display:flex; flex-direction:column; gap:16px;">
+
+        <div class="card">
+          <div style="font-size:13px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:16px;">Foto</div>
+          <div id="fotoPreview" style="display:none; margin-bottom:12px;">
+            <img src="" alt="Preview" style="width:100%; border-radius:8px; border:1px solid var(--border); object-fit:cover; aspect-ratio:3/4;">
+          </div>
+          <button type="button" class="btn btn-ghost" style="width:100%; justify-content:center;" onclick="apriCloudinary()">📷 Carica foto</button>
+          <input type="hidden" id="pFoto">
+          <div id="fotoStatus" style="font-size:12px; color:#888; margin-top:8px; text-align:center;">Nessuna foto</div>
+        </div>
+
+        <div class="card">
+          <div style="font-size:13px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:16px;">Opzioni</div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">Speciale</label>
+            <select class="form-select" id="pSpeciale">
+              <option value="NO">No</option>
+              <option value="SI">Sì ✂️</option>
+            </select>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" style="width:100%; justify-content:center; padding:14px; font-size:15px;" onclick="salvaProdotto()">
+          Salva prodotto
+        </button>
+
+      </div>
     </div>
   </section>
 
