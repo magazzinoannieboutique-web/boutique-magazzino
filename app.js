@@ -178,25 +178,25 @@ function filtraInventario() {
 
 function renderProdotti(lista) {
   const grid = document.getElementById('gridProdotti');
-  if (!lista.length) { grid.innerHTML = '<div style="color:#888;">Nessun prodotto trovato.</div>'; return; }
+  if (!lista.length) { grid.innerHTML = '<div style="color:var(--c3);">Nessun prodotto trovato.</div>'; return; }
   grid.innerHTML = lista.map(p => `
-    <div class="articolo-card">
-      <div class="articolo-foto">
-        ${p.Foto_URL ? `<img src="${p.Foto_URL}" alt="${p.Nome}">` : '<span>📷 No foto</span>'}
-      </div>
-      <div class="articolo-info">
-        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:6px;">
-          ${p.Speciale === 'SI' ? '<span class="badge badge-speciale">✂️ Speciale</span>' : ''}
+    <div class="inv-card">
+      <div class="inv-card-info">
+        <div class="inv-card-badges">
+          ${p.Speciale === 'SI' ? '<span class="badge badge-speciale">✂️</span>' : ''}
           ${p.Categoria ? `<span class="badge">${p.Categoria}</span>` : ''}
         </div>
-        <div class="articolo-nome">${p.Nome}</div>
-        <div class="articolo-brand">${p.Taglia} · ${p.Colore} · <span style="color:#bbb;">${p.SKU}</span></div>
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
-          <div class="articolo-prezzo">${CONFIG.VALUTA} ${p.Prezzo}</div>
-          <div style="font-size:12px; color:${parseInt(p.Quantità) > 0 ? '#888' : '#c0392b'};">
-            ${parseInt(p.Quantità) > 0 ? p.Quantità + ' pz' : '<span class="badge badge-esaurito">Esaurito</span>'}
+        <div class="inv-card-nome">${p.Nome}</div>
+        <div class="inv-card-sub">${[p.Taglia, p.Colore, p.Brand].filter(Boolean).join(' · ')}</div>
+        <div class="inv-card-bottom">
+          <div class="inv-card-prezzo">€ ${p.Prezzo}</div>
+          <div class="inv-card-qty ${parseInt(p.Quantità) <= 0 ? 'esaurito' : ''}">
+            ${parseInt(p.Quantità) > 0 ? p.Quantità + ' pz' : 'Esaurito'}
           </div>
         </div>
+      </div>
+      <div class="inv-card-foto">
+        ${p.Foto_URL ? `<img src="${p.Foto_URL}" alt="${p.Nome}" loading="lazy">` : `<span class="inv-nofoto">📷</span>`}
       </div>
     </div>
   `).join('');
@@ -337,8 +337,8 @@ function stampaEtichette() {
       gap:1mm; line-height:1;
     }
     .et-prezzo { font-size:12pt; font-weight:900; }
-    .et-sep    { font-size:15pt; color:#222; }
-    .et-taglia { font-size:12pt; font-weight:900; }
+    .et-sep    { font-size:7pt; color:#bbb; }
+    .et-taglia { font-size:9pt; font-weight:700; color:#444; }
 
     /* Colonna destra 25mm */
     .et-dx {
@@ -388,9 +388,9 @@ function stampaEtichette() {
           </div>
         </div>
         <div class="et-dx">
-          <div class="et-sku">\${p.SKU}</div>
           <div class="et-qr" id="qr-\${p.SKU}"></div>
           <div class="et-nome">\${p.Nome}</div>
+          <div class="et-sku">\${p.SKU}</div>
         </div>
       \`;
       grid.appendChild(div);
