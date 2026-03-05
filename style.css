@@ -452,7 +452,7 @@ tr:hover td { background: rgba(91,135,160,0.04); }
   transform: translateY(-2px);
 }
 .et-card input[type="checkbox"] {
-  position: absolute; top: 12px; left: 12px;
+  position: absolute; top: 37px; left: 22px;
   width: 18px; height: 18px;
   accent-color: var(--c4);
   z-index: 2; cursor: pointer;
@@ -473,7 +473,7 @@ tr:hover td { background: rgba(91,135,160,0.04); }
 
 /* Info a sinistra */
 .et-card-info {
-  flex: 1; padding: 16px 14px 16px 38px;
+  flex: 1; padding: 16px 14px 16px 58px;
   display: flex; flex-direction: column;
   justify-content: center; gap: 5px;
   order: 1;
@@ -496,14 +496,13 @@ tr:hover td { background: rgba(91,135,160,0.04); }
 /* ===== INVENTARIO CARD ===== */
 #gridProdotti {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
   gap: 10px;
 }
 
 .inv-card {
   display: flex;
   align-items: stretch;
-  height: 90px;
+  height: 130px;
   background: var(--surface);
   border: 1px solid rgba(255,255,255,0.8);
   border-radius: var(--r);
@@ -546,5 +545,5 @@ tr:hover td { background: rgba(91,135,160,0.04); }
 .inv-nofoto { font-size: 22px; opacity: 0.15; }
 
 /* Fix anche altezza fissa etichette card */
-.et-card { height: 90px; }
+.et-card { height: 150px; }
 .et-card-foto { width: 90px; }
