@@ -410,3 +410,20 @@ tr:hover td { background: rgba(91,135,160,0.04); }
   nav a { padding: 7px 13px; }
   .storico-stats { gap: 8px; }
 }
+
+/* ===== PERIODO TABS ===== */
+.periodo-tab {
+  padding: 6px 14px; border: none; border-radius: 999px;
+  font-size: 12px; font-weight: 400; font-family: var(--font);
+  cursor: pointer; transition: all 0.18s;
+  background: transparent; color: var(--c3);
+}
+.periodo-tab.active { background: var(--c4); color: white; box-shadow: 0 2px 8px rgba(91,135,160,0.3); }
+.periodo-tab:hover:not(.active) { background: rgba(91,135,160,0.12); color: var(--c5); }
+
+/* solo speciali toggle attivo */
+#btnSoloSpeciali.attivo { background: rgba(180,130,30,0.12); color: #8a6020; border-color: rgba(180,130,30,0.3); }
+
+/* margine positivo / negativo */
+.margine-pos { color: #3a7d5a; font-weight: 500; }
+.margine-neg { color: #b5451b; font-weight: 500; }

@@ -207,17 +207,18 @@ function renderProdotti(lista) {
 // ============================================
 async function salvaProdotto() {
   const dati = {
-    action:    'addProdotto',
-    Nome:      document.getElementById('pNome').value.trim(),
-    Categoria: document.getElementById('pCategoria').value.trim(),
-    Brand:     document.getElementById('pBrand').value.trim(),
-    Taglia:    document.getElementById('pTaglia').value.trim(),
-    Colore:    document.getElementById('pColore').value.trim(),
-    Prezzo:    document.getElementById('pPrezzo').value,
-    Quantita:  document.getElementById('pQuantita').value,
-    Speciale:  document.getElementById('pSpeciale').value,
-    Note:      document.getElementById('pNote').value.trim(),
-    Foto_URL:  document.getElementById('pFoto').value,
+    action:          'addProdotto',
+    Nome:            document.getElementById('pNome').value.trim(),
+    Categoria:       document.getElementById('pCategoria').value.trim(),
+    Brand:           document.getElementById('pBrand').value.trim(),
+    Taglia:          document.getElementById('pTaglia').value.trim(),
+    Colore:          document.getElementById('pColore').value.trim(),
+    Prezzo:          document.getElementById('pPrezzo').value,
+    PrezzoAcquisto:  document.getElementById('pPrezzoAcquisto').value,
+    Quantita:        document.getElementById('pQuantita').value,
+    Speciale:        document.getElementById('pSpeciale').value,
+    Note:            document.getElementById('pNote').value.trim(),
+    Foto_URL:        document.getElementById('pFoto').value,
   };
   if (!dati.Nome) { showToast('Il nome è obbligatorio', 'error'); return; }
 
@@ -231,11 +232,11 @@ async function salvaProdotto() {
   btn.disabled = false;
 
   if (res.success) {
-    showToast(`✅ Prodotto salvato!`, 'success');
+    showToast('✅ Prodotto salvato!', 'success');
     const box = document.getElementById('skuGenerato');
     box.textContent = `✅ SKU generato: ${res.sku}`;
     box.style.display = 'block';
-    ['pNome','pCategoria','pBrand','pTaglia','pColore','pPrezzo','pNote','pFoto'].forEach(id => {
+    ['pNome','pCategoria','pBrand','pTaglia','pColore','pPrezzo','pPrezzoAcquisto','pNote','pFoto'].forEach(id => {
       document.getElementById(id).value = '';
     });
     document.getElementById('pQuantita').value = '1';
@@ -299,76 +300,47 @@ function stampaEtichette() {
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
   <style>
     * { box-sizing:border-box; margin:0; padding:0; }
-    body { font-family: system-ui, sans-serif; background:#fff; padding:10px; }
-
-    .controls {
-      margin-bottom:16px; display:flex; gap:10px; align-items:center;
-      padding:12px; background:#f5f5f5; border-radius:8px;
-    }
-    .btn-print {
-      padding:10px 22px; background:#5b87a0; color:white;
-      border:none; border-radius:8px; font-size:14px; cursor:pointer;
-    }
+    body { font-family:system-ui,sans-serif; background:#fff; padding:10px; }
+    .controls { margin-bottom:16px; display:flex; gap:10px; align-items:center; padding:12px; background:#f5f5f5; border-radius:8px; }
+    .btn-print { padding:10px 22px; background:#5b87a0; color:white; border:none; border-radius:8px; font-size:14px; cursor:pointer; }
     .info { font-size:13px; color:#666; }
-
-    /* Griglia etichette */
     .grid { display:flex; flex-wrap:wrap; gap:3mm; }
 
-    /* Etichetta 50x30mm — layout orizzontale */
+    /* Etichetta 50×30mm — layout verticale centrato */
     .etichetta {
-      width: 50mm;
-      height: 30mm;
-      padding: 2mm 2.5mm;
-      border: 0.3mm solid #999;
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      gap: 2mm;
-      page-break-inside: avoid;
-      overflow: hidden;
+      width:50mm; height:30mm;
+      border:0.3mm solid #aaa;
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:space-between;
+      padding:1.5mm 2mm 1mm;
+      page-break-inside:avoid; overflow:hidden;
+      position:relative;
     }
 
-    /* Testo a sinistra */
-    .et-testo {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      gap: 0.8mm;
-      min-width: 0;
+    /* Logo in cima */
+    .et-logo { height:4mm; width:auto; object-fit:contain; opacity:0.85; }
+
+    /* Riga centrale: prezzo | taglia */
+    .et-main {
+      display:flex; align-items:baseline; gap:2mm;
+      line-height:1;
     }
-    .et-negozio {
-      font-size: 5.5pt;
-      font-weight: 700;
-      letter-spacing: 0.8px;
-      text-transform: uppercase;
-      color: #111;
-      display: flex;
-      align-items: center;
-      gap: 1.5mm;
+    .et-prezzo { font-size:11pt; font-weight:900; letter-spacing:-0.3px; }
+    .et-sep    { font-size:7pt; color:#bbb; }
+    .et-taglia { font-size:8pt; font-weight:700; color:#333; }
+
+    /* Parte bassa: SKU + QR + nome */
+    .et-bottom {
+      display:flex; flex-direction:column; align-items:center; gap:0.5mm; width:100%;
     }
-    .et-dot {
-      width: 2mm; height: 2mm;
-      background: #5b87a0;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-    .et-divider { width:100%; height:0.2mm; background:#ddd; }
+    .et-sku  { font-size:4pt; color:#aaa; font-family:monospace; letter-spacing:0.3px; }
+    .et-qr   { display:flex; align-items:center; justify-content:center; }
+    .et-qr img, .et-qr canvas { width:14mm !important; height:14mm !important; }
     .et-nome {
-      font-size: 7pt;
-      font-weight: 700;
-      line-height: 1.15;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      font-size:4.5pt; color:#333; text-align:center;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      max-width:46mm; font-weight:600;
     }
-    .et-det  { font-size: 5.5pt; color: #555; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .et-prezzo { font-size: 9pt; font-weight: 800; }
-    .et-sku  { font-size: 4.5pt; color: #aaa; font-family: monospace; }
-
-    /* QR a destra */
-    .et-qr { flex-shrink: 0; display:flex; align-items:center; justify-content:center; }
-    .et-qr img, .et-qr canvas { width:23mm !important; height:23mm !important; }
 
     @media print {
       body { padding:2mm; }
@@ -380,34 +352,32 @@ function stampaEtichette() {
 <body>
   <div class="controls">
     <button class="btn-print" onclick="window.print()">🖨️ Stampa</button>
-    <span class="info">${prodotti.length} etichett${prodotti.length === 1 ? 'a' : 'e'} · formato 50×30mm · ORGBRO Z3</span>
+    <span class="info">${prodotti.length} etichett${prodotti.length === 1 ? 'a' : 'e'} · 50×30mm · ORGBRO Z3</span>
   </div>
   <div class="grid" id="grid"></div>
   <script>
     const prodotti = ${JSON.stringify(prodotti)};
-    const negozio  = '${CONFIG.NEGOZIO_NOME}';
     const grid = document.getElementById('grid');
 
     prodotti.forEach(p => {
-      const det = [p.Taglia, p.Colore].filter(Boolean).join(' · ');
       const div = document.createElement('div');
       div.className = 'etichetta';
       div.innerHTML = \`
-        <div class="et-testo">
-          <div class="et-negozio"><span class="et-dot"></span>\${negozio}</div>
-          <div class="et-divider"></div>
-          <div class="et-nome">\${p.Nome}</div>
-          \${det ? \`<div class="et-det">\${det}</div>\` : ''}
+        <img class="et-logo" src="logo.png" alt="" onerror="this.style.display='none'">
+        <div class="et-main">
           <div class="et-prezzo">€ \${p.Prezzo || '—'}</div>
-          <div class="et-sku">\${p.SKU}</div>
+          \${p.Taglia ? \`<div class="et-sep">·</div><div class="et-taglia">\${p.Taglia}</div>\` : ''}
         </div>
-        <div class="et-qr" id="qr-\${p.SKU}"></div>
+        <div class="et-bottom">
+          <div class="et-sku">\${p.SKU}</div>
+          <div class="et-qr" id="qr-\${p.SKU}"></div>
+          <div class="et-nome">\${p.Nome}</div>
+        </div>
       \`;
       grid.appendChild(div);
       new QRCode(document.getElementById('qr-' + p.SKU), {
-        text: p.SKU,
-        width: 87, height: 87,
-        colorDark: '#000000', colorLight: '#ffffff',
+        text: p.SKU, width: 53, height: 53,
+        colorDark:'#000000', colorLight:'#ffffff',
         correctLevel: QRCode.CorrectLevel.M
       });
     });
@@ -418,37 +388,110 @@ function stampaEtichette() {
 }
 
 // ============================================
-// STORICO
+// STORICO — con filtri periodo, speciali, margine
 // ============================================
+let _venditeCache   = [];
+let _periodoCorrente = 'oggi';
+let _soloSpeciali    = false;
+let _prodottiMap     = {}; // SKU → PrezzoAcquisto
+
 async function caricaStorico() {
-  const data  = await api({ action: 'getVendite' });
+  const [vendite, prodotti] = await Promise.all([
+    api({ action: 'getVendite' }),
+    api({ action: 'getProdotti' })
+  ]);
+
+  _venditeCache = vendite;
+  // Mappa SKU → PrezzoAcquisto
+  _prodottiMap = {};
+  prodotti.forEach(p => { _prodottiMap[p.SKU] = parseFloat(p.PrezzoAcquisto || 0); });
+
+  // Incasso totale sempre su tutto
+  const incTot = vendite.reduce((s,v) => s + parseFloat(v.Prezzo||0), 0);
+  document.getElementById('statIncassoTot').textContent = '€ ' + incTot.toFixed(2);
+
+  setPeriodo(_periodoCorrente);
+}
+
+function setPeriodo(p) {
+  _periodoCorrente = p;
+  document.querySelectorAll('.periodo-tab').forEach(b => b.classList.toggle('active', b.dataset.periodo === p));
+
+  const ora   = new Date();
+  let da = null, a = null;
+
+  if (p === 'oggi') {
+    da = new Date(ora); da.setHours(0,0,0,0);
+    a  = new Date(ora); a.setHours(23,59,59,999);
+  } else if (p === 'mese') {
+    da = new Date(ora.getFullYear(), ora.getMonth(), 1);
+    a  = new Date(ora.getFullYear(), ora.getMonth()+1, 0, 23,59,59,999);
+  } else if (p === 'anno') {
+    da = new Date(ora.getFullYear(), 0, 1);
+    a  = new Date(ora.getFullYear(), 11, 31, 23,59,59,999);
+  } else if (p === 'custom') {
+    const vda = document.getElementById('filtroDataDa').value;
+    const va  = document.getElementById('filtroDataA').value;
+    da = vda ? new Date(vda + 'T00:00:00') : null;
+    a  = va  ? new Date(va  + 'T23:59:59') : null;
+  }
+  // tutto: nessun filtro data
+  renderStorico(da, a);
+}
+
+function toggleSoloSpeciali() {
+  _soloSpeciali = !_soloSpeciali;
+  document.getElementById('btnSoloSpeciali').classList.toggle('attivo', _soloSpeciali);
+  setPeriodo(_periodoCorrente);
+}
+
+function renderStorico(da, a) {
+  let lista = [..._venditeCache].reverse();
+
+  // Filtro data
+  if (da) lista = lista.filter(v => new Date(v.Timestamp) >= da);
+  if (a)  lista = lista.filter(v => new Date(v.Timestamp) <= a);
+
+  // Filtro speciali — recupera dal prodotto
+  if (_soloSpeciali) lista = lista.filter(v => {
+    const p = Object.values(_prodottiMap); // cerca per nome/sku nella cache prodotti
+    return v.Speciale === 'SI' || v.speciale === 'SI';
+  });
+
   const tbody = document.getElementById('tabellaVendite');
 
-  // Stats oggi
-  const oggi = new Date(); oggi.setHours(0,0,0,0);
-  const venditeOggi = data.filter(v => {
-    const d = new Date(v.Timestamp); d.setHours(0,0,0,0);
-    return d.getTime() === oggi.getTime();
-  });
-  const incassoOggi  = venditeOggi.reduce((s,v) => s + parseFloat(v.Prezzo||0), 0);
-  const incassoTot   = data.reduce((s,v) => s + parseFloat(v.Prezzo||0), 0);
+  // Stats periodo
+  const incasso = lista.reduce((s,v) => s + parseFloat(v.Prezzo||0), 0);
+  const margine = lista.reduce((s,v) => {
+    const costo = _prodottiMap[v.SKU] || 0;
+    return s + (parseFloat(v.Prezzo||0) - costo);
+  }, 0);
+  document.getElementById('statVenditePeriodo').textContent  = lista.length;
+  document.getElementById('statIncassoPeriodo').textContent  = '€ ' + incasso.toFixed(2);
+  document.getElementById('statMarginePeriodo').textContent  = (margine >= 0 ? '+' : '') + '€ ' + margine.toFixed(2);
+  document.getElementById('statMarginePeriodo').style.color  = margine >= 0 ? 'var(--success)' : 'var(--warning)';
 
-  document.getElementById('statVenditeOggi').textContent = venditeOggi.length;
-  document.getElementById('statIncassoOggi').textContent = '€ ' + incassoOggi.toFixed(2);
-  document.getElementById('statVenditeTot').textContent  = data.length;
-  document.getElementById('statIncassoTot').textContent  = '€ ' + incassoTot.toFixed(2);
-
-  if (!data.length) {
-    tbody.innerHTML = '<tr><td colspan="6" style="color:#888;">Nessuna vendita ancora</td></tr>';
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="color:var(--c3); text-align:center; padding:24px;">Nessuna vendita nel periodo</td></tr>';
     return;
   }
-  tbody.innerHTML = [...data].reverse().map(v => `<tr>
-    <td>${new Date(v.Timestamp).toLocaleString('it-IT')}</td>
-    <td><strong>${v.Nome}</strong></td>
-    <td>${v.Taglia||'—'}</td><td>${v.Colore||'—'}</td>
-    <td style="font-family:var(--font-serif); font-size:15px;">${CONFIG.VALUTA} ${v.Prezzo}</td>
-    <td style="color:#bbb; font-size:11px;">${v.ID_Vendita}</td>
-  </tr>`).join('');
+
+  tbody.innerHTML = lista.map(v => {
+    const costo   = _prodottiMap[v.SKU] || 0;
+    const prezzo  = parseFloat(v.Prezzo || 0);
+    const margine = prezzo - costo;
+    const mClass  = margine >= 0 ? 'margine-pos' : 'margine-neg';
+    const mText   = costo > 0 ? (margine >= 0 ? '+' : '') + '€ ' + margine.toFixed(2) : '—';
+    return `<tr>
+      <td style="font-size:12px; color:var(--c3);">${new Date(v.Timestamp).toLocaleString('it-IT', {day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})}</td>
+      <td><strong>${v.Nome}</strong>${v.Speciale === 'SI' ? ' <span class="badge badge-speciale" style="font-size:9px;">✂️</span>' : ''}</td>
+      <td>${v.Taglia||'—'}</td>
+      <td>${v.Colore||'—'}</td>
+      <td style="font-family:var(--serif); font-size:15px;">€ ${prezzo.toFixed(2)}</td>
+      <td style="color:var(--c3); font-size:13px;">${costo > 0 ? '€ ' + costo.toFixed(2) : '—'}</td>
+      <td class="${mClass}">${mText}</td>
+    </tr>`;
+  }).join('');
 }
 
 // ============================================

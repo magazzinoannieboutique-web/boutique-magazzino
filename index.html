@@ -124,7 +124,8 @@
               </div>
               <div class="form-group"><label class="form-label">Taglia</label><input class="form-input" id="pTaglia" placeholder="es. S, M, L, 38"></div>
               <div class="form-group"><label class="form-label">Colore</label><input class="form-input" id="pColore" placeholder="es. Rosso, Nero"></div>
-              <div class="form-group"><label class="form-label">Prezzo (€)</label><input class="form-input" id="pPrezzo" type="number" placeholder="49.90"></div>
+              <div class="form-group"><label class="form-label">Prezzo vendita (€)</label><input class="form-input" id="pPrezzo" type="number" placeholder="49.90" step="0.01"></div>
+              <div class="form-group"><label class="form-label">Prezzo acquisto (€)</label><input class="form-input" id="pPrezzoAcquisto" type="number" placeholder="25.00" step="0.01"></div>
               <div class="form-group"><label class="form-label">Quantità</label><input class="form-input" id="pQuantita" type="number" value="1"></div>
             </div>
             <div class="form-group"><label class="form-label">Note</label><input class="form-input" id="pNote" placeholder=""></div>
@@ -170,17 +171,40 @@
       <!-- STORICO -->
       <section class="section section-inner" id="sec-storico">
         <h1 class="section-title">Storico vendite</h1>
-        <div class="storico-stats">
-          <div class="storico-stat"><div class="storico-stat-label">Vendite oggi</div><div class="storico-stat-value" id="statVenditeOggi">—</div></div>
-          <div class="storico-stat"><div class="storico-stat-label">Incasso oggi</div><div class="storico-stat-value" id="statIncassoOggi">—</div></div>
-          <div class="storico-stat"><div class="storico-stat-label">Vendite totali</div><div class="storico-stat-value" id="statVenditeTot">—</div></div>
+
+        <!-- Stats cards -->
+        <div class="storico-stats" id="storicoStats">
+          <div class="storico-stat"><div class="storico-stat-label">Vendite periodo</div><div class="storico-stat-value" id="statVenditePeriodo">—</div></div>
+          <div class="storico-stat"><div class="storico-stat-label">Incasso periodo</div><div class="storico-stat-value" id="statIncassoPeriodo">—</div></div>
+          <div class="storico-stat"><div class="storico-stat-label">Margine periodo</div><div class="storico-stat-value" id="statMarginePeriodo">—</div></div>
           <div class="storico-stat"><div class="storico-stat-label">Incasso totale</div><div class="storico-stat-value" id="statIncassoTot">—</div></div>
         </div>
+
+        <!-- Filtri periodo -->
+        <div class="card" style="margin-bottom:18px;">
+          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+            <!-- Tabs veloci -->
+            <div style="display:flex; gap:4px; background:rgba(91,135,160,0.08); padding:4px; border-radius:999px;">
+              <button class="periodo-tab active" data-periodo="oggi"  onclick="setPeriodo('oggi')">Oggi</button>
+              <button class="periodo-tab"        data-periodo="mese"  onclick="setPeriodo('mese')">Mese</button>
+              <button class="periodo-tab"        data-periodo="anno"  onclick="setPeriodo('anno')">Anno</button>
+              <button class="periodo-tab"        data-periodo="tutto" onclick="setPeriodo('tutto')">Tutto</button>
+            </div>
+            <!-- Date custom -->
+            <input type="date" class="form-input" id="filtroDataDa" style="max-width:150px;" onchange="setPeriodo('custom')">
+            <span style="color:var(--c3); font-size:12px;">→</span>
+            <input type="date" class="form-input" id="filtroDataA"  style="max-width:150px;" onchange="setPeriodo('custom')">
+            <!-- Toggle speciali -->
+            <button class="btn btn-ghost" id="btnSoloSpeciali" onclick="toggleSoloSpeciali()" style="margin-left:auto;">✂️ Solo speciali</button>
+          </div>
+        </div>
+
+        <!-- Tabella -->
         <div class="card">
           <div class="table-wrap">
             <table>
-              <thead><tr><th>Data</th><th>Prodotto</th><th>Taglia</th><th>Colore</th><th>Prezzo</th><th>ID</th></tr></thead>
-              <tbody id="tabellaVendite"><tr><td colspan="6" style="color:var(--c3);">Caricamento...</td></tr></tbody>
+              <thead><tr><th>Data</th><th>Prodotto</th><th>Taglia</th><th>Colore</th><th>Vendita</th><th>Acquisto</th><th>Margine</th></tr></thead>
+              <tbody id="tabellaVendite"><tr><td colspan="7" style="color:var(--c3);">Caricamento...</td></tr></tbody>
             </table>
           </div>
         </div>
