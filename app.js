@@ -491,7 +491,7 @@ function renderStorico(da, a) {
   // Stats periodo
   const incasso = lista.reduce((s,v) => s + parseFloat(v.Prezzo||0), 0);
   const margine = lista.reduce((s,v) => {
-    const costo = _prodottiMap[v.SKU] || 0;
+    const costo = parseFloat(v.PrezzoAcquisto || _prodottiMap[v.SKU] || 0);
     return s + (parseFloat(v.Prezzo||0) - costo);
   }, 0);
   document.getElementById('statVenditePeriodo').textContent  = lista.length;
@@ -505,7 +505,7 @@ function renderStorico(da, a) {
   }
 
   tbody.innerHTML = lista.map(v => {
-    const costo   = _prodottiMap[v.SKU] || 0;
+    const costo   = parseFloat(v.PrezzoAcquisto || _prodottiMap[v.SKU] || 0);
     const prezzo  = parseFloat(v.Prezzo || 0);
     const margine = prezzo - costo;
     const mClass  = margine >= 0 ? 'margine-pos' : 'margine-neg';
