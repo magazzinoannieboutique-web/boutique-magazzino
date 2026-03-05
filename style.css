@@ -431,7 +431,7 @@ tr:hover td { background: rgba(91,135,160,0.04); }
 /* ===== ETICHETTE CARD PRE-STAMPA ===== */
 #listaEtichette {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 12px;
 }
 
