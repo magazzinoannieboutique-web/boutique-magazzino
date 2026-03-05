@@ -333,8 +333,8 @@ function stampaEtichette() {
       gap:1mm; line-height:1;
     }
     .et-prezzo { font-size:12pt; font-weight:900; }
-    .et-sep    { font-size:7pt; color:#bbb; }
-    .et-taglia { font-size:9pt; font-weight:700; color:#444; }
+    .et-sep    { font-size:15pt; color:#222; }
+    .et-taglia { font-size:12pt; font-weight:900; }
 
     /* Colonna destra 25mm */
     .et-dx {
@@ -384,9 +384,9 @@ function stampaEtichette() {
           </div>
         </div>
         <div class="et-dx">
+          <div class="et-sku">\${p.SKU}</div>
           <div class="et-qr" id="qr-\${p.SKU}"></div>
           <div class="et-nome">\${p.Nome}</div>
-          <div class="et-sku">\${p.SKU}</div>
         </div>
       \`;
       grid.appendChild(div);
