@@ -545,5 +545,5 @@ tr:hover td { background: rgba(91,135,160,0.04); }
 .inv-nofoto { font-size: 22px; opacity: 0.15; }
 
 /* Fix anche altezza fissa etichette card */
-.et-card { height: 150px; }
+.et-card { height: 130px; }
 .et-card-foto { width: 90px; }
