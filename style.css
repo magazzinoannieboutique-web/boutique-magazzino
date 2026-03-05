@@ -427,3 +427,68 @@ tr:hover td { background: rgba(91,135,160,0.04); }
 /* margine positivo / negativo */
 .margine-pos { color: #3a7d5a; font-weight: 500; }
 .margine-neg { color: #b5451b; font-weight: 500; }
+
+/* ===== ETICHETTE CARD PRE-STAMPA ===== */
+#listaEtichette {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 12px;
+}
+
+.et-card {
+  display: flex;
+  align-items: stretch;
+  background: var(--surface);
+  border: 1px solid rgba(255,255,255,0.8);
+  border-radius: var(--r);
+  overflow: hidden;
+  cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.2s;
+  box-shadow: 0 2px 8px rgba(30,48,64,0.06);
+  position: relative;
+}
+.et-card:hover {
+  box-shadow: 0 8px 24px rgba(30,48,64,0.13);
+  transform: translateY(-2px);
+}
+.et-card input[type="checkbox"] {
+  position: absolute; top: 12px; left: 12px;
+  width: 18px; height: 18px;
+  accent-color: var(--c4);
+  z-index: 2; cursor: pointer;
+}
+
+/* Foto a destra */
+.et-card-foto {
+  width: 110px; flex-shrink: 0;
+  background: rgba(91,135,160,0.07);
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden; order: 2;
+}
+.et-card-foto img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+.et-card-nofoto { font-size: 28px; opacity: 0.18; }
+
+/* Info a sinistra */
+.et-card-info {
+  flex: 1; padding: 16px 14px 16px 38px;
+  display: flex; flex-direction: column;
+  justify-content: center; gap: 5px;
+  order: 1;
+}
+.et-card-nome {
+  font-weight: 500; font-size: 14px;
+  color: var(--c6); line-height: 1.3;
+}
+.et-card-taglia {
+  font-size: 12px; color: var(--c3);
+}
+.et-card-bottom {
+  display: flex; align-items: center; gap: 8px; margin-top: 4px;
+}
+.et-card-prezzo {
+  font-family: var(--serif); font-size: 20px;
+  font-weight: 500; color: var(--c4);
+}

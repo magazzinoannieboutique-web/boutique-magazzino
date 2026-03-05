@@ -266,19 +266,23 @@ function filtraEtichette() {
 
 function renderEtichette(lista) {
   const el = document.getElementById('listaEtichette');
-  if (!lista.length) { el.innerHTML = '<div style="color:#888;">Nessun prodotto trovato.</div>'; return; }
+  if (!lista.length) { el.innerHTML = '<div style="color:var(--c3);">Nessun prodotto trovato.</div>'; return; }
   el.innerHTML = lista.map(p => `
-    <label style="display:flex; align-items:center; gap:12px; background:white; border:1px solid var(--border);
-      border-radius:10px; padding:14px; cursor:pointer; transition:border-color 0.15s;"
-      onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
-      <input type="checkbox" class="etichetta-check" value="${p.SKU}"
-        style="width:16px; height:16px; accent-color:var(--accent); flex-shrink:0;">
-      <div style="flex:1; min-width:0;">
-        <div style="font-weight:600; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.Nome}</div>
-        <div style="font-size:12px; color:#888; margin-top:2px;">${p.Taglia} · ${p.Colore}</div>
-        <div style="font-size:13px; color:var(--accent); margin-top:2px; font-weight:600;">€ ${p.Prezzo}</div>
+    <label class="et-card" onclick="">
+      <input type="checkbox" class="etichetta-check" value="${p.SKU}">
+      <div class="et-card-foto">
+        ${p.Foto_URL
+          ? `<img src="${p.Foto_URL}" alt="${p.Nome}" loading="lazy">`
+          : `<span class="et-card-nofoto">📷</span>`}
       </div>
-      <div style="font-size:11px; color:#bbb; font-family:monospace; flex-shrink:0;">${p.SKU}</div>
+      <div class="et-card-info">
+        <div class="et-card-nome">${p.Nome}</div>
+        <div class="et-card-taglia">${[p.Taglia, p.Colore, p.Brand].filter(Boolean).join(' · ')}</div>
+        <div class="et-card-bottom">
+          <div class="et-card-prezzo">€ ${p.Prezzo}</div>
+          ${p.Speciale === 'SI' ? '<span class="badge badge-speciale">✂️</span>' : ''}
+        </div>
+      </div>
     </label>
   `).join('');
 }
