@@ -306,46 +306,59 @@ function stampaEtichette() {
     .info { font-size:13px; color:#666; }
     .grid { display:flex; flex-wrap:wrap; gap:3mm; }
 
-    /* Etichetta 50×30mm — 2 colonne */
+    /* Etichetta 50×30mm — 2 colonne 25/25 */
     .etichetta {
       width:50mm; height:30mm;
-      border:0.3mm solid #aaa;
+      border:0.3mm solid #999;
       display:flex; flex-direction:row;
       align-items:stretch;
       page-break-inside:avoid; overflow:hidden;
     }
 
-    /* Colonna sinistra */
+    /* Colonna sinistra 25mm */
     .et-sx {
-      flex:1; display:flex; flex-direction:column;
+      width:25mm; flex-shrink:0;
+      display:flex; flex-direction:column;
       align-items:center; justify-content:center;
-      gap:1.5mm; padding:2mm 1.5mm 2mm 2mm;
-      border-right:0.2mm solid #eee;
+      gap:2mm;
+      padding:1.5mm;
+      border-right:0.2mm solid #ddd;
     }
-    .et-logo  { height:7mm; width:auto; max-width:22mm; object-fit:contain; }
-    .et-main  { display:flex; align-items:baseline; gap:1.5mm; line-height:1; }
-    .et-prezzo{ font-size:10pt; font-weight:900; letter-spacing:-0.3px; }
-    .et-sep   { font-size:6pt; color:#ccc; }
-    .et-taglia{ font-size:8pt; font-weight:700; color:#444; }
+    .et-logo {
+      width:20mm; height:auto; max-height:10mm;
+      object-fit:contain;
+    }
+    .et-main {
+      display:flex; align-items:baseline;
+      gap:1mm; line-height:1;
+    }
+    .et-prezzo { font-size:12pt; font-weight:900; }
+    .et-sep    { font-size:7pt; color:#bbb; }
+    .et-taglia { font-size:9pt; font-weight:700; color:#444; }
 
-    /* Colonna destra */
+    /* Colonna destra 25mm */
     .et-dx {
-      width:18mm; display:flex; flex-direction:column;
+      width:25mm; flex-shrink:0;
+      display:flex; flex-direction:column;
       align-items:center; justify-content:center;
-      gap:1mm; padding:1.5mm 1.5mm 1.5mm 1mm;
+      gap:0.8mm;
+      padding:1mm 1mm 1mm 0.5mm;
     }
-    .et-qr { display:flex; align-items:center; justify-content:center; }
-    .et-qr img, .et-qr canvas { width:14mm !important; height:14mm !important; }
+    .et-qr { display:flex; }
+    .et-qr img, .et-qr canvas { width:20mm !important; height:20mm !important; }
     .et-nome {
-      font-size:4pt; color:#333; text-align:center; font-weight:600;
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:16mm;
+      font-size:4.5pt; color:#222; text-align:center; font-weight:700;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      max-width:23mm; line-height:1.2;
     }
-    .et-sku { font-size:3.5pt; color:#bbb; font-family:monospace; }
+    .et-sku {
+      font-size:3.5pt; color:#aaa; font-family:monospace; letter-spacing:0.2px;
+    }
 
     @media print {
       body { padding:2mm; }
       .controls { display:none; }
-      .etichetta { border-color:#666; }
+      .etichetta { border-color:#555; }
     }
   </style>
 </head>
@@ -378,7 +391,7 @@ function stampaEtichette() {
       \`;
       grid.appendChild(div);
       new QRCode(document.getElementById('qr-' + p.SKU), {
-        text: p.SKU, width: 53, height: 53,
+        text: p.SKU, width: 76, height: 76,
         colorDark:'#000000', colorLight:'#ffffff',
         correctLevel: QRCode.CorrectLevel.M
       });
