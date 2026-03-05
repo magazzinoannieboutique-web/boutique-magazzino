@@ -306,41 +306,41 @@ function stampaEtichette() {
     .info { font-size:13px; color:#666; }
     .grid { display:flex; flex-wrap:wrap; gap:3mm; }
 
-    /* Etichetta 50×30mm — layout verticale centrato */
+    /* Etichetta 50×30mm — 2 colonne */
     .etichetta {
       width:50mm; height:30mm;
       border:0.3mm solid #aaa;
-      display:flex; flex-direction:column;
-      align-items:center; justify-content:space-between;
-      padding:1.5mm 2mm 1mm;
+      display:flex; flex-direction:row;
+      align-items:stretch;
       page-break-inside:avoid; overflow:hidden;
-      position:relative;
     }
 
-    /* Logo in cima */
-    .et-logo { height:4mm; width:auto; object-fit:contain; opacity:0.85; }
-
-    /* Riga centrale: prezzo | taglia */
-    .et-main {
-      display:flex; align-items:baseline; gap:2mm;
-      line-height:1;
+    /* Colonna sinistra */
+    .et-sx {
+      flex:1; display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      gap:1.5mm; padding:2mm 1.5mm 2mm 2mm;
+      border-right:0.2mm solid #eee;
     }
-    .et-prezzo { font-size:11pt; font-weight:900; letter-spacing:-0.3px; }
-    .et-sep    { font-size:7pt; color:#bbb; }
-    .et-taglia { font-size:8pt; font-weight:700; color:#333; }
+    .et-logo  { height:7mm; width:auto; max-width:22mm; object-fit:contain; }
+    .et-main  { display:flex; align-items:baseline; gap:1.5mm; line-height:1; }
+    .et-prezzo{ font-size:10pt; font-weight:900; letter-spacing:-0.3px; }
+    .et-sep   { font-size:6pt; color:#ccc; }
+    .et-taglia{ font-size:8pt; font-weight:700; color:#444; }
 
-    /* Parte bassa: SKU + QR + nome */
-    .et-bottom {
-      display:flex; flex-direction:column; align-items:center; gap:0.5mm; width:100%;
+    /* Colonna destra */
+    .et-dx {
+      width:18mm; display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      gap:1mm; padding:1.5mm 1.5mm 1.5mm 1mm;
     }
-    .et-sku  { font-size:4pt; color:#aaa; font-family:monospace; letter-spacing:0.3px; }
-    .et-qr   { display:flex; align-items:center; justify-content:center; }
+    .et-qr { display:flex; align-items:center; justify-content:center; }
     .et-qr img, .et-qr canvas { width:14mm !important; height:14mm !important; }
     .et-nome {
-      font-size:4.5pt; color:#333; text-align:center;
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-      max-width:46mm; font-weight:600;
+      font-size:4pt; color:#333; text-align:center; font-weight:600;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:16mm;
     }
+    .et-sku { font-size:3.5pt; color:#bbb; font-family:monospace; }
 
     @media print {
       body { padding:2mm; }
@@ -363,15 +363,17 @@ function stampaEtichette() {
       const div = document.createElement('div');
       div.className = 'etichetta';
       div.innerHTML = \`
-        <img class="et-logo" src="logo.png" alt="" onerror="this.style.display='none'">
-        <div class="et-main">
-          <div class="et-prezzo">€ \${p.Prezzo || '—'}</div>
-          \${p.Taglia ? \`<div class="et-sep">·</div><div class="et-taglia">\${p.Taglia}</div>\` : ''}
+        <div class="et-sx">
+          <img class="et-logo" src="logo.png" alt="" onerror="this.style.display='none'">
+          <div class="et-main">
+            <div class="et-prezzo">€ \${p.Prezzo || '—'}</div>
+            \${p.Taglia ? \`<div class="et-sep">·</div><div class="et-taglia">\${p.Taglia}</div>\` : ''}
+          </div>
         </div>
-        <div class="et-bottom">
-          <div class="et-sku">\${p.SKU}</div>
+        <div class="et-dx">
           <div class="et-qr" id="qr-\${p.SKU}"></div>
           <div class="et-nome">\${p.Nome}</div>
+          <div class="et-sku">\${p.SKU}</div>
         </div>
       \`;
       grid.appendChild(div);
@@ -437,6 +439,15 @@ function setPeriodo(p) {
   }
   // tutto: nessun filtro data
   renderStorico(da, a);
+}
+
+function resetFiltriStorico() {
+  _soloSpeciali = false;
+  _periodoCorrente = 'oggi';
+  document.getElementById('btnSoloSpeciali').classList.remove('attivo');
+  document.getElementById('filtroDataDa').value = '';
+  document.getElementById('filtroDataA').value  = '';
+  setPeriodo('oggi');
 }
 
 function toggleSoloSpeciali() {

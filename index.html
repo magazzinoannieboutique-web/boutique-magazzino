@@ -194,8 +194,11 @@
             <input type="date" class="form-input" id="filtroDataDa" style="max-width:150px;" onchange="setPeriodo('custom')">
             <span style="color:var(--c3); font-size:12px;">→</span>
             <input type="date" class="form-input" id="filtroDataA"  style="max-width:150px;" onchange="setPeriodo('custom')">
-            <!-- Toggle speciali -->
-            <button class="btn btn-ghost" id="btnSoloSpeciali" onclick="toggleSoloSpeciali()" style="margin-left:auto;">✂️ Solo speciali</button>
+            <!-- Toggle speciali + reset -->
+            <div style="display:flex; gap:8px; margin-left:auto;">
+              <button class="btn btn-ghost" id="btnSoloSpeciali" onclick="toggleSoloSpeciali()">✂️ Solo speciali</button>
+              <button class="btn btn-ghost" onclick="resetFiltriStorico()" title="Reset filtri">↺</button>
+            </div>
           </div>
         </div>
 
