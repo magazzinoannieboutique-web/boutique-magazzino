@@ -398,7 +398,7 @@ function stampaEtichette() {
         div.className = 'etichetta';
         div.innerHTML =
           '<div class="et-sx">' +
-            '<img class="et-logo" src="logo.png" alt="" onerror="this.style.display=\'none\'">' +
+            '<img class="et-logo" src="logo.png" alt="" onerror="this.hidden=true">' +
             '<div class="et-main">' +
               '<span class="et-prezzo">€ ' + (p.Prezzo || '—') + '</span>' +
               (p.Taglia ? '<span class="et-sep">·</span><span class="et-taglia">' + p.Taglia + '</span>' : '') +
