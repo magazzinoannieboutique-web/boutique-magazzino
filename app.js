@@ -354,10 +354,14 @@ function stampaEtichette() {
     .et-sku { font-size:3.5pt; color:#aaa; font-family:monospace; }
 
     @media print {
-      @page { margin:0; size:auto; }
-      body  { padding:0; }
+      @page {
+        size: 50mm 30mm;
+        margin: 0;
+      }
+      body { padding:0; margin:0; }
       .controls { display:none; }
-      .grid { padding:2mm; gap:2mm; }
+      .grid { padding:0; gap:0; }
+      .etichetta { width:50mm; height:30mm; }
     }
   </style>
 </head>
