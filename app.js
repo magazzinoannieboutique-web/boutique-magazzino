@@ -300,106 +300,127 @@ function stampaEtichette() {
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Etichette — ${CONFIG.NEGOZIO_NOME}</title>
+  <title>Etichette</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
   <style>
     * { box-sizing:border-box; margin:0; padding:0; }
-    body { font-family:system-ui,sans-serif; background:#fff; padding:10px; }
-    .controls { margin-bottom:16px; display:flex; gap:10px; align-items:center; padding:12px; background:#f5f5f5; border-radius:8px; }
-    .btn-print { padding:10px 22px; background:#5b87a0; color:white; border:none; border-radius:8px; font-size:14px; cursor:pointer; }
-    .info { font-size:13px; color:#666; }
-    .grid { display:flex; flex-wrap:wrap; gap:3mm; }
+    body { font-family:system-ui,sans-serif; background:#fff; }
 
-    /* Etichetta 50×30mm — 2 colonne 25/25 */
+    .controls {
+      padding:12px 16px; background:#f5f5f5;
+      display:flex; gap:10px; align-items:center;
+    }
+    .btn-print {
+      padding:9px 20px; background:#5b87a0; color:white;
+      border:none; border-radius:8px; font-size:14px; cursor:pointer;
+    }
+    .btn-print:disabled { opacity:0.5; cursor:default; }
+    .info { font-size:13px; color:#666; }
+
+    .grid { padding:10px; display:flex; flex-wrap:wrap; gap:3mm; }
+
+    /* 50×30mm — 2 colonne 25/25 */
     .etichetta {
       width:50mm; height:30mm;
-      border:0.3mm solid #999;
       display:flex; flex-direction:row;
-      align-items:stretch;
-      page-break-inside:avoid; overflow:hidden;
+      overflow:hidden;
+      page-break-inside:avoid; break-inside:avoid;
     }
 
-    /* Colonna sinistra 25mm */
     .et-sx {
       width:25mm; flex-shrink:0;
       display:flex; flex-direction:column;
       align-items:center; justify-content:center;
-      gap:2mm;
-      padding:1.5mm;
+      gap:2mm; padding:1.5mm;
       border-right:0.2mm solid #ddd;
     }
-    .et-logo {
-      width:20mm; height:auto; max-height:10mm;
-      object-fit:contain;
-    }
-    .et-main {
-      display:flex; align-items:baseline;
-      gap:1mm; line-height:1;
-    }
+    .et-logo { width:20mm; height:auto; max-height:10mm; object-fit:contain; }
+    .et-main { display:flex; align-items:baseline; gap:1mm; line-height:1; }
     .et-prezzo { font-size:12pt; font-weight:900; }
     .et-sep    { font-size:7pt; color:#bbb; }
     .et-taglia { font-size:9pt; font-weight:700; color:#444; }
 
-    /* Colonna destra 25mm */
     .et-dx {
       width:25mm; flex-shrink:0;
       display:flex; flex-direction:column;
       align-items:center; justify-content:center;
-      gap:0.8mm;
-      padding:1mm 1mm 1mm 0.5mm;
+      gap:0.5mm; padding:1mm;
     }
-    .et-qr { display:flex; }
-    .et-qr img, .et-qr canvas { width:20mm !important; height:20mm !important; }
+    .et-qr-img { width:20mm; height:20mm; display:block; flex-shrink:0; }
     .et-nome {
       font-size:4.5pt; color:#222; text-align:center; font-weight:700;
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-      max-width:23mm; line-height:1.2;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:23mm;
     }
-    .et-sku {
-      font-size:3.5pt; color:#aaa; font-family:monospace; letter-spacing:0.2px;
-    }
+    .et-sku { font-size:3.5pt; color:#aaa; font-family:monospace; }
 
     @media print {
-      body { padding:2mm; }
+      @page { margin:0; size:auto; }
+      body  { padding:0; }
       .controls { display:none; }
-      .etichetta { border-color:#555; }
+      .grid { padding:2mm; gap:2mm; }
     }
   </style>
 </head>
 <body>
   <div class="controls">
-    <button class="btn-print" onclick="window.print()">🖨️ Stampa</button>
-    <span class="info">${prodotti.length} etichett${prodotti.length === 1 ? 'a' : 'e'} · 50×30mm · ORGBRO Z3</span>
+    <button class="btn-print" id="btnStampa" disabled>⏳ Generazione QR...</button>
+    <span class="info" id="infoTxt">Attendere...</span>
   </div>
   <div class="grid" id="grid"></div>
+
   <script>
     const prodotti = ${JSON.stringify(prodotti)};
     const grid = document.getElementById('grid');
 
-    prodotti.forEach(p => {
-      const div = document.createElement('div');
-      div.className = 'etichetta';
-      div.innerHTML = \`
-        <div class="et-sx">
-          <img class="et-logo" src="logo.png" alt="" onerror="this.style.display='none'">
-          <div class="et-main">
-            <div class="et-prezzo">€ \${p.Prezzo || '—'}</div>
-            \${p.Taglia ? \`<div class="et-sep">·</div><div class="et-taglia">\${p.Taglia}</div>\` : ''}
-          </div>
-        </div>
-        <div class="et-dx">
-          <div class="et-qr" id="qr-\${p.SKU}"></div>
-          <div class="et-nome">\${p.Nome}</div>
-          <div class="et-sku">\${p.SKU}</div>
-        </div>
-      \`;
-      grid.appendChild(div);
-      new QRCode(document.getElementById('qr-' + p.SKU), {
-        text: p.SKU, width: 76, height: 76,
-        colorDark:'#000000', colorLight:'#ffffff',
-        correctLevel: QRCode.CorrectLevel.M
+    function buildQR(text, size) {
+      return new Promise(resolve => {
+        const tmp = document.createElement('div');
+        tmp.style.cssText = 'position:absolute;left:-9999px;top:-9999px;';
+        document.body.appendChild(tmp);
+        new QRCode(tmp, {
+          text, width: size, height: size,
+          colorDark:'#000000', colorLight:'#ffffff',
+          correctLevel: QRCode.CorrectLevel.M
+        });
+        setTimeout(() => {
+          const canvas = tmp.querySelector('canvas');
+          const url = canvas ? canvas.toDataURL('image/png') : '';
+          document.body.removeChild(tmp);
+          resolve(url);
+        }, 80);
       });
-    });
+    }
+
+    async function init() {
+      for (const p of prodotti) {
+        const qrUrl = await buildQR(p.SKU, 76);
+        const div = document.createElement('div');
+        div.className = 'etichetta';
+        div.innerHTML =
+          '<div class="et-sx">' +
+            '<img class="et-logo" src="logo.png" alt="" onerror="this.style.display=\'none\'">' +
+            '<div class="et-main">' +
+              '<span class="et-prezzo">€ ' + (p.Prezzo || '—') + '</span>' +
+              (p.Taglia ? '<span class="et-sep">·</span><span class="et-taglia">' + p.Taglia + '</span>' : '') +
+            '</div>' +
+          '</div>' +
+          '<div class="et-dx">' +
+            (qrUrl ? '<img class="et-qr-img" src="' + qrUrl + '" alt="QR">' : '') +
+            '<div class="et-nome">' + p.Nome + '</div>' +
+            '<div class="et-sku">' + p.SKU + '</div>' +
+          '</div>';
+        grid.appendChild(div);
+      }
+
+      const btn = document.getElementById('btnStampa');
+      btn.textContent = '🖨️ Stampa';
+      btn.disabled = false;
+      btn.onclick = () => window.print();
+      document.getElementById('infoTxt').textContent =
+        prodotti.length + ' etichett' + (prodotti.length === 1 ? 'a' : 'e') + ' · 50×30mm · ORGBRO Z3';
+    }
+
+    init();
   <\/script>
 </body>
 </html>`);
