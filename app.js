@@ -410,9 +410,7 @@ function stampaEtichette() {
           '</div>' +
           '<div class="et-dx">' +
             (qrUrl ? '<img class="et-qr-img" src="' + qrUrl + '" alt="QR">' : '') +
-            '<div class="et-nome">' + p.Nome + '</div>' +
-            '<div class="et-sku">' + p.SKU + '</div>' +
-          '</div>';
+            '</div>';
         grid.appendChild(div);
       }
 
