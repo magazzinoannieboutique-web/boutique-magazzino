@@ -348,7 +348,7 @@ function stampaEtichette() {
     }
     .et-qr-img { width:20mm; height:20mm; display:block; flex-shrink:0; }
     .et-nome {
-      font-size:4.5pt; color:#222; text-align:center; font-weight:700;
+      font-size:6pt; color:#222; text-align:center; font-weight:700;
       white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:23mm;
     }
     .et-sku { font-size:3.5pt; color:#aaa; font-family:monospace; }
