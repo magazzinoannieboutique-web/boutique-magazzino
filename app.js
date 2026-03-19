@@ -246,7 +246,7 @@ async function salvaProdotto() {
   // Ogni voce può avere una quantità propria: "S:2, M:3, L:1"
   // oppure tutte usano la quantità nel campo Quantità
   const tagliaVoci = tagliaRaw
-    ? tagliaRaw.split(',').map(t => t.trim()).filter(Boolean)
+    ? tagliaRaw.split(',').map(t => t.trim()).toUpperCase().filter(Boolean)
     : [''];
 
   // Parsing quantità per taglia: "2,3,1" oppure singolo "1"
