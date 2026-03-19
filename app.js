@@ -444,7 +444,7 @@ function stampaEtichette() {
       display: block; flex-shrink: 0;
     }
     .et-nome {
-      font-size: 4.5pt; color: #222; text-align: center; font-weight: 700;
+      font-size: 6pt; color: #222; text-align: center; font-weight: 700;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       max-width: 23mm;
     }
@@ -509,6 +509,7 @@ function stampaEtichette() {
           <div class="et-sx">
             <img class="et-logo" src="logo.png" alt=""
                  onerror="this.style.display='none'">
+            <div class="et-nome">\${p.Nome}</div>
             <div class="et-main">
               <span class="et-prezzo">€ \${p.Prezzo || '—'}</span>
               \${p.Taglia ? '<span class="et-sep">·</span><span class="et-taglia">' + p.Taglia + '</span>' : ''}
@@ -516,8 +517,6 @@ function stampaEtichette() {
           </div>
           <div class="et-dx">
             \${qrUrl ? '<img class="et-qr-img" src="' + qrUrl + '" alt="QR">' : ''}
-            <div class="et-nome">\${p.Nome}</div>
-            <div class="et-sku">\${p.SKU}</div>
           </div>
         \`;
         grid.appendChild(div);
