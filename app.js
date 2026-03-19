@@ -341,21 +341,88 @@ function renderEtichette(lista) {
 function selezionaTutte()   { document.querySelectorAll('.etichetta-check').forEach(c => c.checked = true); }
 function deselezionaTutte() { document.querySelectorAll('.etichetta-check').forEach(c => c.checked = false); }
 
-function stampaEtichette() {
+// Modal quantità etichette — più elegante del prompt nativo
+function chiediCopie(p) {
+  return new Promise(resolve => {
+    const qta = parseInt(p.Quantità) || 1;
+    // Se quantità = 1, salta il modal
+    if (qta <= 1) { resolve(1); return; }
+
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+      position:fixed; inset:0; z-index:9999;
+      background:rgba(30,48,64,0.45); backdrop-filter:blur(8px);
+      display:flex; align-items:center; justify-content:center; padding:20px;
+    `;
+    overlay.innerHTML = `
+      <div style="
+        background:rgba(255,255,255,0.95); border-radius:24px;
+        padding:28px 28px 22px; max-width:320px; width:100%;
+        box-shadow:0 24px 64px rgba(30,48,64,0.2);
+        animation: popIn 0.22s cubic-bezier(0.34,1.56,0.64,1);
+      ">
+        <div style="font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:500; color:#1e3040; margin-bottom:4px;">
+          Quante etichette?
+        </div>
+        <div style="font-size:12px; color:#8ab4c8; margin-bottom:20px;">
+          ${p.Nome}${p.Taglia ? ' · ' + p.Taglia : ''} &nbsp;·&nbsp; ${qta} pz disponibili
+        </div>
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:24px;">
+          <button id="qMeno" style="
+            width:40px; height:40px; border:1px solid rgba(91,135,160,0.25);
+            background:white; color:#5b87a0; border-radius:12px;
+            font-size:20px; cursor:pointer; flex-shrink:0;
+          ">−</button>
+          <input id="qInput" type="number" min="1" max="${qta}" value="${qta}" style="
+            flex:1; text-align:center; font-family:'Cormorant Garamond',serif;
+            font-size:32px; font-weight:600; color:#5b87a0;
+            border:none; outline:none; background:transparent;
+          ">
+          <button id="qPiu" style="
+            width:40px; height:40px; border:1px solid rgba(91,135,160,0.25);
+            background:white; color:#5b87a0; border-radius:12px;
+            font-size:20px; cursor:pointer; flex-shrink:0;
+          ">+</button>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button id="qSkip" style="
+            flex:1; padding:11px; border:1px solid rgba(91,135,160,0.2);
+            background:rgba(91,135,160,0.06); color:#8ab4c8;
+            border-radius:999px; font-size:13px; cursor:pointer;
+          ">Salta</button>
+          <button id="qOk" style="
+            flex:2; padding:11px; border:none;
+            background:#5b87a0; color:white;
+            border-radius:999px; font-size:13px; cursor:pointer;
+            box-shadow:0 3px 12px rgba(91,135,160,0.35);
+          ">Conferma</button>
+        </div>
+      </div>
+      <style>@keyframes popIn { from { transform:scale(0.88) translateY(16px); opacity:0; } to { transform:scale(1) translateY(0); opacity:1; } }</style>
+    `;
+    document.body.appendChild(overlay);
+
+    const input = overlay.querySelector('#qInput');
+    overlay.querySelector('#qMeno').onclick  = () => { input.value = Math.max(1, parseInt(input.value||1) - 1); };
+    overlay.querySelector('#qPiu').onclick   = () => { input.value = Math.min(qta, parseInt(input.value||1) + 1); };
+    overlay.querySelector('#qSkip').onclick  = () => { document.body.removeChild(overlay); resolve(0); };
+    overlay.querySelector('#qOk').onclick    = () => {
+      const v = Math.max(1, Math.min(qta, parseInt(input.value) || 1));
+      document.body.removeChild(overlay);
+      resolve(v);
+    };
+  });
+}
+
+async function stampaEtichette() {
   const skus = [...document.querySelectorAll('.etichetta-check:checked')].map(c => c.value);
   if (!skus.length) { showToast('Seleziona almeno un prodotto', 'error'); return; }
   const selezionati = skus.map(sku => etichetteCache.find(p => p.SKU === sku)).filter(Boolean);
 
-  // Per ogni prodotto con quantità > 1 chiede quante copie stampare
+  // Chiedi copie per ogni prodotto con qtà > 1, in sequenza
   const prodotti = [];
   for (const p of selezionati) {
-    const qta = parseInt(p.Quantità) || 1;
-    let copie = 1;
-    if (qta > 1) {
-      const risposta = prompt(`Quante etichette per "${p.Nome}" (${p.Taglia || 'unica'})?\nDisponibili: ${qta}`, qta);
-      if (risposta === null) continue; // skip se annulla
-      copie = Math.max(1, parseInt(risposta) || 1);
-    }
+    const copie = await chiediCopie(p);
     for (let i = 0; i < copie; i++) prodotti.push(p);
   }
   if (!prodotti.length) return;
@@ -369,99 +436,64 @@ function stampaEtichette() {
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
   <style>
     * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:system-ui,sans-serif; background:#fff; }
 
-    body {
-      font-family: system-ui, sans-serif;
-      background: #fff;
-    }
-
-    /* ANTEPRIMA */
     .controls {
-      padding: 12px 16px; background: #f5f5f5;
-      display: flex; gap: 10px; align-items: center;
+      padding:12px 16px; background:#f5f5f5;
+      display:flex; gap:10px; align-items:center;
     }
     .btn-print {
-      padding: 9px 20px; background: #5b87a0; color: white;
-      border: none; border-radius: 8px; font-size: 14px; cursor: pointer;
+      padding:9px 20px; background:#5b87a0; color:white;
+      border:none; border-radius:8px; font-size:14px; cursor:pointer;
     }
-    .info { font-size: 13px; color: #666; }
+    .btn-print:disabled { opacity:0.5; cursor:default; }
+    .info { font-size:13px; color:#666; }
 
-    /* GRIGLIA — in anteprima con gap visibile */
-    .grid {
-      padding: 10px;
-      display: flex; flex-wrap: wrap; gap: 3mm;
-    }
+    .grid { padding:10px; display:flex; flex-wrap:wrap; gap:3mm; }
 
-    /* ETICHETTA 50×30mm — misure fisiche esatte */
+    /* 50×30mm — 2 colonne 25/25 */
     .etichetta {
-      width: 50mm;
-      height: 30mm;
-      border: 0.3mm solid #999;
-      display: flex;
-      flex-direction: row;
-      overflow: hidden;
-      page-break-inside: avoid;
-      break-inside: avoid;
+      width:50mm; height:30mm;
+      display:flex; flex-direction:row;
+      overflow:hidden;
+      page-break-inside:avoid; break-inside:avoid;
     }
 
-    /* Colonna sinistra 25mm */
     .et-sx {
-      width: 25mm;
-      flex-shrink: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 2mm;
-      padding: 1.5mm;
-      border-right: 0.2mm solid #ddd;
+      width:25mm; flex-shrink:0;
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      gap:2mm; padding:1.5mm;
+      border-right:0.2mm solid #ddd;
     }
-    .et-logo {
-      width: 20mm; height: auto; max-height: 10mm;
-      object-fit: contain;
-    }
-    .et-main {
-      display: flex; align-items: baseline; gap: 1mm; line-height: 1;
-    }
-    .et-prezzo { font-size: 12pt; font-weight: 900; }
-    .et-sep    { font-size: 7pt; color: #bbb; }
-    .et-taglia { font-size: 9pt; font-weight: 700; color: #444; }
+    .et-logo { width:20mm; height:auto; max-height:10mm; object-fit:contain; }
+    .et-main { display:flex; align-items:baseline; gap:1mm; line-height:1; }
+    .et-prezzo { font-size:12pt; font-weight:900; }
+    .et-sep    { font-size:7pt; color:#bbb; }
+    .et-taglia { font-size:9pt; font-weight:700; color:#444; }
 
-    /* Colonna destra 25mm */
     .et-dx {
-      width: 25mm;
-      flex-shrink: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5mm;
-      padding: 1mm;
+      width:25mm; flex-shrink:0;
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      gap:0.5mm; padding:1mm;
     }
-    /* QR come <img> — dimensione fissa, niente canvas residuo */
-    .et-qr-img {
-      width: 20mm; height: 20mm;
-      display: block; flex-shrink: 0;
-    }
+    .et-qr-img { width:20mm; height:20mm; display:block; flex-shrink:0; }
     .et-nome {
-      font-size: 6pt; color: #222; text-align: center; font-weight: 700;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      max-width: 23mm;
+      font-size:6pt; color:#222; text-align:center; font-weight:700;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:23mm;
     }
-    .et-sku {
-      font-size: 3.5pt; color: #aaa; font-family: monospace;
-    }
+    .et-sku { font-size:3.5pt; color:#aaa; font-family:monospace; }
 
-    /* STAMPA — azzera tutti i margini di pagina */
     @media print {
       @page {
+        size: 50mm 30mm;
         margin: 0;
-        size: auto;
       }
-      body { padding: 0; }
-      .controls { display: none; }
-      .grid { padding: 2mm; gap: 2mm; }
-      .etichetta { border-color: #555; }
+      body { padding:0; margin:0; }
+      .controls { display:none; }
+      .grid { padding:0; gap:0; }
+      .etichetta { width:50mm; height:30mm; }
     }
   </style>
 </head>
@@ -476,7 +508,6 @@ function stampaEtichette() {
     const prodotti = ${JSON.stringify(prodotti)};
     const grid = document.getElementById('grid');
 
-    // Genera QR come data URL, poi costruisce le etichette
     function buildQR(text, size) {
       return new Promise(resolve => {
         const tmp = document.createElement('div');
@@ -484,10 +515,9 @@ function stampaEtichette() {
         document.body.appendChild(tmp);
         new QRCode(tmp, {
           text, width: size, height: size,
-          colorDark: '#000000', colorLight: '#ffffff',
+          colorDark:'#000000', colorLight:'#ffffff',
           correctLevel: QRCode.CorrectLevel.M
         });
-        // QRCode è sincrono ma il canvas viene popolato dopo un tick
         setTimeout(() => {
           const canvas = tmp.querySelector('canvas');
           const url = canvas ? canvas.toDataURL('image/png') : '';
@@ -498,27 +528,22 @@ function stampaEtichette() {
     }
 
     async function init() {
-      // 96dpi → 1mm ≈ 3.78px → 20mm ≈ 76px
-      const QR_PX = 76;
-
       for (const p of prodotti) {
-        const qrUrl = await buildQR(p.SKU, QR_PX);
+        const qrUrl = await buildQR(p.SKU, 76);
         const div = document.createElement('div');
         div.className = 'etichetta';
-        div.innerHTML = \`
-          <div class="et-sx">
-            <img class="et-logo" src="logo.png" alt=""
-                 onerror="this.style.display='none'">
-            <div class="et-nome">\${p.Nome}</div>
-            <div class="et-main">
-              <span class="et-prezzo">€ \${p.Prezzo || '—'}</span>
-              \${p.Taglia ? '<span class="et-sep">·</span><span class="et-taglia">' + p.Taglia + '</span>' : ''}
-            </div>
-          </div>
-          <div class="et-dx">
-            \${qrUrl ? '<img class="et-qr-img" src="' + qrUrl + '" alt="QR">' : ''}
-          </div>
-        \`;
+        div.innerHTML =
+          '<div class="et-sx">' +
+            '<img class="et-logo" src="logo.png" alt="" onerror="this.hidden=true">' +
+            '<div class="et-nome">' + p.Nome + '</div>' +
+            '<div class="et-main">' +
+              '<span class="et-prezzo">€ ' + (p.Prezzo || '—') + '</span>' +
+              (p.Taglia ? '<span class="et-sep">·</span><span class="et-taglia">' + p.Taglia + '</span>' : '') +
+            '</div>' +
+          '</div>' +
+          '<div class="et-dx">' +
+            (qrUrl ? '<img class="et-qr-img" src="' + qrUrl + '" alt="QR">' : '') +
+          '</div>';
         grid.appendChild(div);
       }
 
