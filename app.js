@@ -158,20 +158,33 @@ function chiudiRiepilogo() {
 // ============================================
 async function caricaInventario() {
   prodottiCache = await api({ action: 'getProdotti' });
+
+  // Popola categorie
   const categorie = [...new Set(prodottiCache.map(p => p.Categoria).filter(Boolean))];
-  const sel = document.getElementById('filtroCategoria');
-  sel.innerHTML = '<option value="">Tutte le categorie</option>';
-  categorie.forEach(c => sel.innerHTML += `<option value="${c}">${c}</option>`);
+  const selCat = document.getElementById('filtroCategoria');
+  selCat.innerHTML = '<option value="">Tutte le categorie</option>';
+  categorie.forEach(c => selCat.innerHTML += `<option value="${c}">${c}</option>`);
+
+  // Popola brand
+  const brand = [...new Set(prodottiCache.map(p => p.Brand).filter(Boolean))].sort();
+  const selBrand = document.getElementById('filtroBrand');
+  selBrand.innerHTML = '<option value="">Tutti i brand</option>';
+  brand.forEach(b => selBrand.innerHTML += `<option value="${b}">${b}</option>`);
+
   renderProdotti(prodottiCache);
 }
 
+function str(v) { return v == null ? '' : String(v).toLowerCase(); }
+
 function filtraInventario() {
-  const testo = document.getElementById('filtroTesto').value.toLowerCase();
+  const testo = document.getElementById('filtroTesto').value.toLowerCase().trim();
   const cat   = document.getElementById('filtroCategoria').value;
+  const brand = document.getElementById('filtroBrand').value;
   const spec  = document.getElementById('filtroSpeciale').value;
   renderProdotti(prodottiCache.filter(p =>
-    (!testo || p.Nome?.toLowerCase().includes(testo) || p.SKU?.toLowerCase().includes(testo)) &&
+    (!testo || str(p.Nome).includes(testo) || str(p.SKU).includes(testo) || str(p.Brand).includes(testo)) &&
     (!cat   || p.Categoria === cat) &&
+    (!brand || p.Brand === brand) &&
     (!spec  || p.Speciale === spec)
   ));
 }
@@ -206,44 +219,80 @@ function renderProdotti(lista) {
 // CARICA PRODOTTO
 // ============================================
 async function salvaProdotto() {
-  const dati = {
-    action:          'addProdotto',
-    Nome:            document.getElementById('pNome').value.trim(),
-    Categoria:       document.getElementById('pCategoria').value.trim(),
-    Brand:           document.getElementById('pBrand').value.trim(),
-    Taglia:          document.getElementById('pTaglia').value.trim(),
-    Colore:          document.getElementById('pColore').value.trim(),
-    Prezzo:          document.getElementById('pPrezzo').value,
-    PrezzoAcquisto:  document.getElementById('pPrezzoAcquisto').value,
-    Quantita:        document.getElementById('pQuantita').value,
-    Speciale:        document.getElementById('pSpeciale').value,
-    Note:            document.getElementById('pNote').value.trim(),
-    Foto_URL:        document.getElementById('pFoto').value,
+  const nome    = document.getElementById('pNome').value.trim();
+  const tagliaRaw = document.getElementById('pTaglia').value.trim();
+  const qtaRaw  = document.getElementById('pQuantita').value.trim();
+
+  if (!nome) { showToast('Il nome è obbligatorio', 'error'); return; }
+
+  // Fix virgola→punto sui prezzi
+  const prezzoStr         = document.getElementById('pPrezzo').value.replace(',', '.');
+  const prezzoAcquistoStr = document.getElementById('pPrezzoAcquisto').value.replace(',', '.');
+
+  const datiBase = {
+    action:         'addProdotto',
+    Nome:           nome,
+    Categoria:      document.getElementById('pCategoria').value.trim(),
+    Brand:          document.getElementById('pBrand').value.trim(),
+    Colore:         document.getElementById('pColore').value.trim(),
+    Prezzo:         prezzoStr,
+    PrezzoAcquisto: prezzoAcquistoStr,
+    Speciale:       document.getElementById('pSpeciale').value,
+    Note:           document.getElementById('pNote').value.trim(),
+    Foto_URL:       document.getElementById('pFoto').value,
   };
-  if (!dati.Nome) { showToast('Il nome è obbligatorio', 'error'); return; }
+
+  // Parsing multi-taglia: "S, M, 2L" → ['S','M','2L']
+  // Ogni voce può avere una quantità propria: "S:2, M:3, L:1"
+  // oppure tutte usano la quantità nel campo Quantità
+  const tagliaVoci = tagliaRaw
+    ? tagliaRaw.split(',').map(t => t.trim()).filter(Boolean)
+    : [''];
+
+  // Parsing quantità per taglia: "2,3,1" oppure singolo "1"
+  const qtaVoci = qtaRaw.split(',').map(q => parseInt(q.trim()) || 1);
+
+  const tasks = tagliaVoci.map((taglia, i) => ({
+    ...datiBase,
+    Taglia:   taglia,
+    Quantita: qtaVoci[i] !== undefined ? qtaVoci[i] : qtaVoci[0],
+  }));
 
   const btn = document.querySelector('#sec-carica .btn-primary');
-  btn.textContent = '⏳ Salvataggio...';
+  btn.textContent = tasks.length > 1 ? `⏳ Salvataggio 0/${tasks.length}...` : '⏳ Salvataggio...';
   btn.disabled = true;
 
-  const res = await apiPost(dati);
+  const skuGenerati = [];
+  for (let i = 0; i < tasks.length; i++) {
+    if (tasks.length > 1) btn.textContent = `⏳ Salvataggio ${i+1}/${tasks.length}...`;
+    const res = await apiPost(tasks[i]);
+    if (res.success) skuGenerati.push(res.sku);
+    else { showToast('❌ ' + (res.error || 'Errore'), 'error'); break; }
+  }
 
   btn.textContent = 'Salva prodotto';
   btn.disabled = false;
 
-  if (res.success) {
-    showToast('✅ Prodotto salvato!', 'success');
+  if (skuGenerati.length) {
     const box = document.getElementById('skuGenerato');
-    box.textContent = `✅ SKU generato: ${res.sku}`;
+    box.innerHTML = `✅ ${skuGenerati.length > 1 ? skuGenerati.length + ' prodotti salvati' : 'Prodotto salvato'}: <strong>${skuGenerati.join(', ')}</strong>`;
     box.style.display = 'block';
-    ['pNome','pCategoria','pBrand','pTaglia','pColore','pPrezzo','pPrezzoAcquisto','pNote','pFoto'].forEach(id => {
-      document.getElementById(id).value = '';
-    });
+    showToast(`✅ ${skuGenerati.length} prodotto/i salvato/i!`, 'success');
+
+    // Reset campi (mantieni nome, cat, brand, colore, prezzi per inserimento rapido taglie successive)
+    document.getElementById('pTaglia').value  = '';
     document.getElementById('pQuantita').value = '1';
-    document.getElementById('fotoPreview').style.display = 'none';
-    document.getElementById('fotoStatus').textContent = 'Nessuna foto';
-  } else {
-    showToast('❌ ' + (res.error || 'Errore'), 'error');
+    // Reset completo solo se taglia singola
+    if (tasks.length === 1) {
+      ['pNome','pCategoria','pBrand','pColore','pPrezzo','pPrezzoAcquisto','pNote','pFoto'].forEach(id => {
+        document.getElementById(id).value = '';
+      });
+      document.getElementById('fotoPreview').style.display = 'none';
+      document.getElementById('fotoStatus').textContent = 'Nessuna foto';
+    }
+
+    // Scroll in cima alla sezione
+    document.getElementById('sec-carica').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
 
@@ -253,14 +302,15 @@ async function salvaProdotto() {
 let etichetteCache = [];
 
 async function caricaEtichette() {
-  etichetteCache = await api({ action: 'getProdotti' });
+  const raw = await api({ action: 'getProdotti' });
+  etichetteCache = [...raw].reverse(); // ultimo inserito prima
   renderEtichette(etichetteCache);
 }
 
 function filtraEtichette() {
   const testo = document.getElementById('filtroEtichetta').value.toLowerCase();
   renderEtichette(etichetteCache.filter(p =>
-    !testo || p.Nome?.toLowerCase().includes(testo) || p.SKU?.toLowerCase().includes(testo)
+    !testo || str(p.Nome).includes(testo) || str(p.SKU).includes(testo) || str(p.Brand).includes(testo)
   ));
 }
 
@@ -281,6 +331,7 @@ function renderEtichette(lista) {
         <div class="et-card-bottom">
           <div class="et-card-prezzo">€ ${p.Prezzo}</div>
           ${p.Speciale === 'SI' ? '<span class="badge badge-speciale">✂️</span>' : ''}
+          ${parseInt(p.Quantità) > 1 ? `<span class="badge" style="color:var(--c3);">${p.Quantità} pz</span>` : ''}
         </div>
       </div>
     </label>
@@ -293,7 +344,21 @@ function deselezionaTutte() { document.querySelectorAll('.etichetta-check').forE
 function stampaEtichette() {
   const skus = [...document.querySelectorAll('.etichetta-check:checked')].map(c => c.value);
   if (!skus.length) { showToast('Seleziona almeno un prodotto', 'error'); return; }
-  const prodotti = skus.map(sku => etichetteCache.find(p => p.SKU === sku)).filter(Boolean);
+  const selezionati = skus.map(sku => etichetteCache.find(p => p.SKU === sku)).filter(Boolean);
+
+  // Per ogni prodotto con quantità > 1 chiede quante copie stampare
+  const prodotti = [];
+  for (const p of selezionati) {
+    const qta = parseInt(p.Quantità) || 1;
+    let copie = 1;
+    if (qta > 1) {
+      const risposta = prompt(`Quante etichette per "${p.Nome}" (${p.Taglia || 'unica'})?\nDisponibili: ${qta}`, qta);
+      if (risposta === null) continue; // skip se annulla
+      copie = Math.max(1, parseInt(risposta) || 1);
+    }
+    for (let i = 0; i < copie; i++) prodotti.push(p);
+  }
+  if (!prodotti.length) return;
 
   const win = window.open('', '_blank');
   win.document.write(`<!DOCTYPE html>
@@ -304,64 +369,99 @@ function stampaEtichette() {
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
   <style>
     * { box-sizing:border-box; margin:0; padding:0; }
-    body { font-family:system-ui,sans-serif; background:#fff; }
 
+    body {
+      font-family: system-ui, sans-serif;
+      background: #fff;
+    }
+
+    /* ANTEPRIMA */
     .controls {
-      padding:12px 16px; background:#f5f5f5;
-      display:flex; gap:10px; align-items:center;
+      padding: 12px 16px; background: #f5f5f5;
+      display: flex; gap: 10px; align-items: center;
     }
     .btn-print {
-      padding:9px 20px; background:#5b87a0; color:white;
-      border:none; border-radius:8px; font-size:14px; cursor:pointer;
+      padding: 9px 20px; background: #5b87a0; color: white;
+      border: none; border-radius: 8px; font-size: 14px; cursor: pointer;
     }
-    .btn-print:disabled { opacity:0.5; cursor:default; }
-    .info { font-size:13px; color:#666; }
+    .info { font-size: 13px; color: #666; }
 
-    .grid { padding:10px; display:flex; flex-wrap:wrap; gap:3mm; }
+    /* GRIGLIA — in anteprima con gap visibile */
+    .grid {
+      padding: 10px;
+      display: flex; flex-wrap: wrap; gap: 3mm;
+    }
 
-    /* 50×30mm — 2 colonne 25/25 */
+    /* ETICHETTA 50×30mm — misure fisiche esatte */
     .etichetta {
-      width:50mm; height:30mm;
-      display:flex; flex-direction:row;
-      overflow:hidden;
-      page-break-inside:avoid; break-inside:avoid;
+      width: 50mm;
+      height: 30mm;
+      border: 0.3mm solid #999;
+      display: flex;
+      flex-direction: row;
+      overflow: hidden;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
 
+    /* Colonna sinistra 25mm */
     .et-sx {
-      width:25mm; flex-shrink:0;
-      display:flex; flex-direction:column;
-      align-items:center; justify-content:center;
-      gap:2mm; padding:1.5mm;
-      border-right:0.2mm solid #ddd;
+      width: 25mm;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2mm;
+      padding: 1.5mm;
+      border-right: 0.2mm solid #ddd;
     }
-    .et-logo { width:20mm; height:auto; max-height:10mm; object-fit:contain; }
-    .et-main { display:flex; align-items:baseline; gap:1mm; line-height:1; }
-    .et-prezzo { font-size:12pt; font-weight:900; }
-    .et-sep    { font-size:7pt; color:#bbb; }
-    .et-taglia { font-size:9pt; font-weight:700; color:#444; }
+    .et-logo {
+      width: 20mm; height: auto; max-height: 10mm;
+      object-fit: contain;
+    }
+    .et-main {
+      display: flex; align-items: baseline; gap: 1mm; line-height: 1;
+    }
+    .et-prezzo { font-size: 12pt; font-weight: 900; }
+    .et-sep    { font-size: 7pt; color: #bbb; }
+    .et-taglia { font-size: 9pt; font-weight: 700; color: #444; }
 
+    /* Colonna destra 25mm */
     .et-dx {
-      width:25mm; flex-shrink:0;
-      display:flex; flex-direction:column;
-      align-items:center; justify-content:center;
-      gap:0.5mm; padding:1mm;
+      width: 25mm;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5mm;
+      padding: 1mm;
     }
-    .et-qr-img { width:20mm; height:20mm; display:block; flex-shrink:0; }
+    /* QR come <img> — dimensione fissa, niente canvas residuo */
+    .et-qr-img {
+      width: 20mm; height: 20mm;
+      display: block; flex-shrink: 0;
+    }
     .et-nome {
-      font-size:6pt; color:#222; text-align:center; font-weight:700;
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:23mm;
+      font-size: 4.5pt; color: #222; text-align: center; font-weight: 700;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      max-width: 23mm;
     }
-    .et-sku { font-size:3.5pt; color:#aaa; font-family:monospace; }
+    .et-sku {
+      font-size: 3.5pt; color: #aaa; font-family: monospace;
+    }
 
+    /* STAMPA — azzera tutti i margini di pagina */
     @media print {
       @page {
-        size: 50mm 30mm;
         margin: 0;
+        size: auto;
       }
-      body { padding:0; margin:0; }
-      .controls { display:none; }
-      .grid { padding:0; gap:0; }
-      .etichetta { width:50mm; height:30mm; }
+      body { padding: 0; }
+      .controls { display: none; }
+      .grid { padding: 2mm; gap: 2mm; }
+      .etichetta { border-color: #555; }
     }
   </style>
 </head>
@@ -376,6 +476,7 @@ function stampaEtichette() {
     const prodotti = ${JSON.stringify(prodotti)};
     const grid = document.getElementById('grid');
 
+    // Genera QR come data URL, poi costruisce le etichette
     function buildQR(text, size) {
       return new Promise(resolve => {
         const tmp = document.createElement('div');
@@ -383,9 +484,10 @@ function stampaEtichette() {
         document.body.appendChild(tmp);
         new QRCode(tmp, {
           text, width: size, height: size,
-          colorDark:'#000000', colorLight:'#ffffff',
+          colorDark: '#000000', colorLight: '#ffffff',
           correctLevel: QRCode.CorrectLevel.M
         });
+        // QRCode è sincrono ma il canvas viene popolato dopo un tick
         setTimeout(() => {
           const canvas = tmp.querySelector('canvas');
           const url = canvas ? canvas.toDataURL('image/png') : '';
@@ -396,22 +498,28 @@ function stampaEtichette() {
     }
 
     async function init() {
+      // 96dpi → 1mm ≈ 3.78px → 20mm ≈ 76px
+      const QR_PX = 76;
+
       for (const p of prodotti) {
-        const qrUrl = await buildQR(p.SKU, 76);
+        const qrUrl = await buildQR(p.SKU, QR_PX);
         const div = document.createElement('div');
         div.className = 'etichetta';
-        div.innerHTML =
-          '<div class="et-sx">' +
-            '<img class="et-logo" src="logo.png" alt="" onerror="this.hidden=true">' +
-            '<div class="et-nome">' + p.Nome + '</div>' +
-            '<div class="et-main">' +
-              '<span class="et-prezzo">€ ' + (p.Prezzo || '—') + '</span>' +
-              (p.Taglia ? '<span class="et-sep">·</span><span class="et-taglia">' + p.Taglia + '</span>' : '') +
-            '</div>' +
-          '</div>' +
-          '<div class="et-dx">' +
-            (qrUrl ? '<img class="et-qr-img" src="' + qrUrl + '" alt="QR">' : '') +
-          '</div>';
+        div.innerHTML = \`
+          <div class="et-sx">
+            <img class="et-logo" src="logo.png" alt=""
+                 onerror="this.style.display='none'">
+            <div class="et-main">
+              <span class="et-prezzo">€ \${p.Prezzo || '—'}</span>
+              \${p.Taglia ? '<span class="et-sep">·</span><span class="et-taglia">' + p.Taglia + '</span>' : ''}
+            </div>
+          </div>
+          <div class="et-dx">
+            \${qrUrl ? '<img class="et-qr-img" src="' + qrUrl + '" alt="QR">' : ''}
+            <div class="et-nome">\${p.Nome}</div>
+            <div class="et-sku">\${p.SKU}</div>
+          </div>
+        \`;
         grid.appendChild(div);
       }
 

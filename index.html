@@ -82,9 +82,12 @@
       <section class="section section-inner" id="sec-inventario">
         <h1 class="section-title">Inventario</h1>
         <div class="filtri">
-          <input class="form-input" style="max-width:220px;" id="filtroTesto" placeholder="Cerca per nome, SKU..." oninput="filtraInventario()">
+          <input class="form-input" style="max-width:220px;" id="filtroTesto" placeholder="Cerca per nome, SKU, brand..." oninput="filtraInventario()">
           <select class="form-select" style="max-width:160px;" id="filtroCategoria" onchange="filtraInventario()">
             <option value="">Tutte le categorie</option>
+          </select>
+          <select class="form-select" style="max-width:160px;" id="filtroBrand" onchange="filtraInventario()">
+            <option value="">Tutti i brand</option>
           </select>
           <select class="form-select" style="max-width:160px;" id="filtroSpeciale" onchange="filtraInventario()">
             <option value="">Tutti</option>
