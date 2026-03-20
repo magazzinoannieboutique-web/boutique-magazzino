@@ -37,7 +37,6 @@ body {
   line-height: 1.55;
   color: var(--c6);
   -webkit-font-smoothing: antialiased;
-  /* sfondo gradiente a tutto schermo */
   background:
     radial-gradient(ellipse at 20% 20%, rgba(91,135,160,0.22) 0%, transparent 55%),
     radial-gradient(ellipse at 80% 80%, rgba(61,99,120,0.18) 0%, transparent 55%),
@@ -46,14 +45,14 @@ body {
   min-height: 100vh;
 }
 
-/* ===== APP SHELL — finestra centrale ===== */
+/* ===== APP SHELL ===== */
 .app-shell {
   max-width: 1100px;
   margin: 24px auto;
   padding: 0 20px 40px;
 }
 
-/* ===== HEADER — dentro la shell ===== */
+/* ===== HEADER ===== */
 .app-header {
   background: var(--glass);
   backdrop-filter: blur(20px);
@@ -104,7 +103,7 @@ nav a.active {
   box-shadow: 0 2px 10px rgba(91,135,160,0.4);
 }
 
-/* ===== CONTENT CARD — il "pannello" principale ===== */
+/* ===== CONTENT CARD ===== */
 .content-card {
   background: var(--glass);
   backdrop-filter: blur(20px);
@@ -198,6 +197,7 @@ main { padding: 0; }
 .btn-ghost:hover { background: rgba(91,135,160,0.18); }
 .btn-success { background: var(--success); color: white; box-shadow: 0 3px 12px rgba(58,125,90,0.3); }
 .btn-danger  { background: var(--warning); color: white; }
+.btn-danger:hover { background: #a03818; transform: translateY(-1px); }
 .btn:disabled { opacity: 0.38; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
 
 /* ===== FORM ===== */
@@ -421,23 +421,23 @@ tr:hover td { background: rgba(91,135,160,0.04); }
 .periodo-tab.active { background: var(--c4); color: white; box-shadow: 0 2px 8px rgba(91,135,160,0.3); }
 .periodo-tab:hover:not(.active) { background: rgba(91,135,160,0.12); color: var(--c5); }
 
-/* solo speciali toggle attivo */
 #btnSoloSpeciali.attivo { background: rgba(180,130,30,0.12); color: #8a6020; border-color: rgba(180,130,30,0.3); }
+#btnMostraEsauriti.attivo { background: rgba(181,69,27,0.08); color: #b5451b; border-color: rgba(181,69,27,0.2); }
 
-/* margine positivo / negativo */
 .margine-pos { color: #3a7d5a; font-weight: 500; }
 .margine-neg { color: #b5451b; font-weight: 500; }
 
 /* ===== ETICHETTE CARD PRE-STAMPA ===== */
 #listaEtichette {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 12px;
 }
 
 .et-card {
   display: flex;
   align-items: stretch;
+  height: 130px;
   background: var(--surface);
   border: 1px solid rgba(255,255,255,0.8);
   border-radius: var(--r);
@@ -452,58 +452,39 @@ tr:hover td { background: rgba(91,135,160,0.04); }
   transform: translateY(-2px);
 }
 .et-card input[type="checkbox"] {
-  position: absolute; top: 12px; left: 12px;
+  position: absolute; top: 37px; left: 22px;
   width: 18px; height: 18px;
   accent-color: var(--c4);
   z-index: 2; cursor: pointer;
 }
 
-/* Foto a destra */
 .et-card-foto {
-  width: 110px; flex-shrink: 0;
+  width: 90px; flex-shrink: 0;
   background: rgba(91,135,160,0.07);
   display: flex; align-items: center; justify-content: center;
   overflow: hidden; order: 2;
 }
-.et-card-foto img {
-  width: 100%; height: 100%;
-  object-fit: cover;
-}
+.et-card-foto img { width: 100%; height: 100%; object-fit: cover; }
 .et-card-nofoto { font-size: 28px; opacity: 0.18; }
 
-/* Info a sinistra */
 .et-card-info {
-  flex: 1; padding: 16px 14px 16px 38px;
+  flex: 1; padding: 16px 14px 16px 58px;
   display: flex; flex-direction: column;
   justify-content: center; gap: 5px;
   order: 1;
 }
-.et-card-nome {
-  font-weight: 500; font-size: 14px;
-  color: var(--c6); line-height: 1.3;
-}
-.et-card-taglia {
-  font-size: 12px; color: var(--c3);
-}
-.et-card-bottom {
-  display: flex; align-items: center; gap: 8px; margin-top: 4px;
-}
-.et-card-prezzo {
-  font-family: var(--serif); font-size: 20px;
-  font-weight: 500; color: var(--c4);
-}
+.et-card-nome { font-weight: 500; font-size: 14px; color: var(--c6); line-height: 1.3; }
+.et-card-taglia { font-size: 12px; color: var(--c3); }
+.et-card-bottom { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.et-card-prezzo { font-family: var(--serif); font-size: 20px; font-weight: 500; color: var(--c4); }
 
 /* ===== INVENTARIO CARD ===== */
-#gridProdotti {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-  gap: 10px;
-}
+#gridProdotti { display: grid; gap: 10px; }
 
 .inv-card {
   display: flex;
   align-items: stretch;
-  height: 90px;
+  height: 130px;
   background: var(--surface);
   border: 1px solid rgba(255,255,255,0.8);
   border-radius: var(--r);
@@ -516,7 +497,6 @@ tr:hover td { background: rgba(91,135,160,0.04); }
   transform: translateY(-2px);
 }
 
-/* Info sinistra */
 .inv-card-info {
   flex: 1; padding: 12px 12px 12px 16px;
   display: flex; flex-direction: column;
@@ -535,19 +515,11 @@ tr:hover td { background: rgba(91,135,160,0.04); }
 .inv-card-qty { font-size: 11px; color: var(--c3); }
 .inv-card-qty.esaurito { color: #b5451b; font-weight: 500; }
 
-/* Foto destra */
 .inv-card-foto {
-  width: 90px; flex-shrink: 0;
+  width: 130px; flex-shrink: 0;
   background: rgba(91,135,160,0.07);
   display: flex; align-items: center; justify-content: center;
-  overflow: hidden;
+  overflow: hidden; position: relative;
 }
 .inv-card-foto img { width: 100%; height: 100%; object-fit: cover; }
 .inv-nofoto { font-size: 22px; opacity: 0.15; }
-
-/* Fix anche altezza fissa etichette card */
-.et-card { height: 90px; }
-.et-card-foto { width: 90px; }
-
-/* esauriti toggle attivo */
-#btnMostraEsauriti.attivo { background: rgba(181,69,27,0.08); color: #b5451b; border-color: rgba(181,69,27,0.2); }
