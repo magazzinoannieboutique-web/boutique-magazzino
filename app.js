@@ -176,6 +176,14 @@ async function caricaInventario() {
 
 function str(v) { return v == null ? '' : String(v).toLowerCase(); }
 
+let _mostraEsauriti = false;
+
+function toggleEsauriti() {
+  _mostraEsauriti = !_mostraEsauriti;
+  document.getElementById('btnMostraEsauriti').classList.toggle('attivo', _mostraEsauriti);
+  filtraInventario();
+}
+
 function filtraInventario() {
   const testo = document.getElementById('filtroTesto').value.toLowerCase().trim();
   const cat   = document.getElementById('filtroCategoria').value;
@@ -185,7 +193,8 @@ function filtraInventario() {
     (!testo || str(p.Nome).includes(testo) || str(p.SKU).includes(testo) || str(p.Brand).includes(testo)) &&
     (!cat   || p.Categoria === cat) &&
     (!brand || p.Brand === brand) &&
-    (!spec  || p.Speciale === spec)
+    (!spec  || p.Speciale === spec) &&
+    (_mostraEsauriti || parseInt(p.Quantità) > 0)
   ));
 }
 
@@ -208,16 +217,97 @@ function renderProdotti(lista) {
           </div>
         </div>
       </div>
-      <div class="inv-card-foto">
+      <div class="inv-card-foto" style="position:relative;">
         ${p.Foto_URL ? `<img src="${p.Foto_URL}" alt="${p.Nome}" loading="lazy">` : `<span class="inv-nofoto">📷</span>`}
+        <button onclick="apriModifica('${p.SKU}')" style="
+          position:absolute; bottom:6px; right:6px;
+          width:28px; height:28px; border-radius:50%;
+          background:rgba(255,255,255,0.92); border:none;
+          box-shadow:0 2px 8px rgba(30,48,64,0.18);
+          cursor:pointer; font-size:13px; display:flex;
+          align-items:center; justify-content:center;
+          transition:transform 0.15s;
+        " onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">✏️</button>
       </div>
     </div>
   `).join('');
 }
 
 // ============================================
-// CARICA PRODOTTO
+// MODAL MODIFICA PRODOTTO
 // ============================================
+function apriModifica(sku) {
+  const p = prodottiCache.find(x => x.SKU === sku);
+  if (!p) return;
+  document.getElementById('mSKU').value           = p.SKU;
+  document.getElementById('mNome').value          = p.Nome || '';
+  document.getElementById('mCategoria').value     = p.Categoria || '';
+  document.getElementById('mBrand').value         = p.Brand || '';
+  document.getElementById('mTaglia').value        = p.Taglia || '';
+  document.getElementById('mColore').value        = p.Colore || '';
+  document.getElementById('mPrezzo').value        = p.Prezzo || '';
+  document.getElementById('mPrezzoAcquisto').value= p.PrezzoAcquisto || '';
+  document.getElementById('mQuantita').value      = p.Quantità || 0;
+  document.getElementById('mSpeciale').value      = p.Speciale || 'NO';
+  document.getElementById('mNote').value          = p.Note || '';
+  document.getElementById('modalModifica').style.display = 'flex';
+}
+
+function chiudiModifica() {
+  document.getElementById('modalModifica').style.display = 'none';
+}
+
+async function salvaModifica() {
+  const sku = document.getElementById('mSKU').value;
+  const btn = document.querySelector('#modalModifica .btn-primary');
+  btn.textContent = '⏳ Salvataggio...'; btn.disabled = true;
+
+  const res = await api({
+    action:         'aggiornaProdotto',
+    sku,
+    Nome:           document.getElementById('mNome').value.trim(),
+    Categoria:      document.getElementById('mCategoria').value.trim(),
+    Brand:          document.getElementById('mBrand').value.trim(),
+    Taglia:         document.getElementById('mTaglia').value.trim().toUpperCase(),
+    Colore:         document.getElementById('mColore').value.trim(),
+    Prezzo:         document.getElementById('mPrezzo').value.replace(',', '.'),
+    PrezzoAcquisto: document.getElementById('mPrezzoAcquisto').value.replace(',', '.'),
+    Quantita:       document.getElementById('mQuantita').value,
+    Speciale:       document.getElementById('mSpeciale').value,
+    Note:           document.getElementById('mNote').value.trim(),
+  });
+
+  btn.textContent = '💾 Salva modifiche'; btn.disabled = false;
+
+  if (res.success) {
+    chiudiModifica();
+    showToast('✅ Prodotto aggiornato', 'success');
+    await caricaInventario();
+    document.querySelector('nav a[data-section="inventario"]').click();
+  } else {
+    showToast('❌ ' + (res.error || 'Errore'), 'error');
+  }
+}
+
+async function eliminaProdotto() {
+  const sku = document.getElementById('mSKU').value;
+  const nome = document.getElementById('mNome').value;
+  if (!confirm(`Eliminare "${nome}"? Rimarrà nel database ma sparirà dall'app.`)) return;
+
+  const btn = document.querySelector('#modalModifica .btn-danger');
+  btn.textContent = '⏳'; btn.disabled = true;
+
+  const res = await api({ action: 'eliminaProdotto', sku });
+  btn.textContent = '🗑 Elimina'; btn.disabled = false;
+
+  if (res.success) {
+    chiudiModifica();
+    showToast('🗑 Prodotto eliminato', '');
+    await caricaInventario();
+  } else {
+    showToast('❌ ' + (res.error || 'Errore'), 'error');
+  }
+}
 async function salvaProdotto() {
   const nome    = document.getElementById('pNome').value.trim();
   const tagliaRaw = document.getElementById('pTaglia').value.trim();

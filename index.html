@@ -93,6 +93,7 @@
             <option value="">Tutti</option>
             <option value="SI">✂️ Solo speciali</option>
           </select>
+          <button class="btn btn-ghost" id="btnMostraEsauriti" onclick="toggleEsauriti()">👻 Esauriti</button>
         </div>
         <div class="card-grid" id="gridProdotti">
       </section>
@@ -221,6 +222,37 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- MODAL MODIFICA PRODOTTO -->
+<div id="modalModifica" class="modal-overlay" style="display:none;">
+  <div class="modal-box" style="max-width:560px; max-height:90vh; overflow-y:auto;">
+    <div style="padding:24px 26px 0;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <div style="font-family:var(--serif); font-size:24px; font-weight:500;">Modifica prodotto</div>
+        <button onclick="chiudiModifica()" style="background:none;border:none;font-size:20px;color:var(--c3);cursor:pointer;">✕</button>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0 16px;">
+        <div class="form-group" style="grid-column:1/-1;"><label class="form-label">Nome</label><input class="form-input" id="mNome"></div>
+        <div class="form-group"><label class="form-label">Categoria</label><input class="form-input" id="mCategoria"></div>
+        <div class="form-group"><label class="form-label">Brand</label><input class="form-input" id="mBrand"></div>
+        <div class="form-group"><label class="form-label">Taglia</label><input class="form-input" id="mTaglia" style="text-transform:uppercase;"></div>
+        <div class="form-group"><label class="form-label">Colore</label><input class="form-input" id="mColore"></div>
+        <div class="form-group"><label class="form-label">Prezzo vendita (€)</label><input class="form-input" id="mPrezzo" type="number" step="0.01"></div>
+        <div class="form-group"><label class="form-label">Prezzo acquisto (€)</label><input class="form-input" id="mPrezzoAcquisto" type="number" step="0.01"></div>
+        <div class="form-group"><label class="form-label">Quantità</label><input class="form-input" id="mQuantita" type="number"></div>
+        <div class="form-group"><label class="form-label">Speciale</label>
+          <select class="form-select" id="mSpeciale"><option value="NO">No</option><option value="SI">Sì ✂️</option></select>
+        </div>
+        <div class="form-group" style="grid-column:1/-1;"><label class="form-label">Note</label><input class="form-input" id="mNote"></div>
+      </div>
+      <input type="hidden" id="mSKU">
+    </div>
+    <div style="display:flex; gap:10px; padding:20px 26px 26px;">
+      <button class="btn btn-danger" style="flex:0 0 auto; padding:12px 18px;" onclick="eliminaProdotto()">🗑 Elimina</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="salvaModifica()">💾 Salva modifiche</button>
+    </div>
+  </div>
+</div>
+
 <script src="config.js"></script>
 <script src="app.js"></script>
 <script>
@@ -233,7 +265,7 @@
       uploadPreset: CONFIG.CLOUDINARY_UPLOAD_PRESET,
       sources: ['local', 'camera'],
       multiple: false,
-      maxFileSize: 5000000,
+      maxFileSize: 20000000,
       transformation: [{ width: 800, crop: 'limit', quality: 'auto' }],
     }, (error, result) => {
       if (!error && result && result.event === 'success') {
