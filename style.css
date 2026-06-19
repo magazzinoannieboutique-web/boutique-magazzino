@@ -523,3 +523,27 @@ tr:hover td { background: rgba(91,135,160,0.04); }
 }
 .inv-card-foto img { width: 100%; height: 100%; object-fit: cover; }
 .inv-nofoto { font-size: 22px; opacity: 0.15; }
+
+/* ===== SALDI ===== */
+#btnModalitaSaldi.attivo { background: rgba(181,69,27,0.10); color: #b5451b; border-color: rgba(181,69,27,0.25); }
+
+.badge-saldo { background: rgba(181,69,27,0.10); color: #b5451b; border-color: rgba(181,69,27,0.25); }
+
+.inv-card-insaldo { border-color: rgba(181,69,27,0.2); }
+
+.inv-card-prezzo.saldato {
+  text-decoration: line-through;
+  color: var(--c3);
+  font-size: 13px;
+}
+.inv-card-prezzo-saldo {
+  font-family: var(--serif);
+  font-size: 17px; font-weight: 500;
+  color: #b5451b;
+}
+
+.inv-card-saldo-edit {
+  height: auto; min-height: 90px;
+  border-color: rgba(181,69,27,0.15);
+  background: rgba(255,248,245,0.9);
+}

@@ -176,11 +176,33 @@ async function caricaInventario() {
 
 function str(v) { return v == null ? '' : String(v).toLowerCase(); }
 
-let _mostraEsauriti = false;
+let _mostraEsauriti  = false;
+let _modalitaSaldi   = false;
+
+// Arrotondamento commerciale: ,01-,49 → difetto, ,50-,99 → eccesso
+function arrotonda(prezzo) {
+  const intero = Math.floor(prezzo);
+  const dec    = prezzo - intero;
+  return dec < 0.5 ? intero : intero + 1;
+}
+
+function calcolaSaldo(prezzoOriginale, pct) {
+  if (!pct || pct <= 0) return null;
+  const scontato = prezzoOriginale * (1 - pct / 100);
+  return arrotonda(scontato);
+}
 
 function toggleEsauriti() {
   _mostraEsauriti = !_mostraEsauriti;
   document.getElementById('btnMostraEsauriti').classList.toggle('attivo', _mostraEsauriti);
+  filtraInventario();
+}
+
+function toggleSaldi() {
+  _modalitaSaldi = !_modalitaSaldi;
+  const btn = document.getElementById('btnModalitaSaldi');
+  btn.classList.toggle('attivo', _modalitaSaldi);
+  btn.textContent = _modalitaSaldi ? '🏷 Esci da saldi' : '🏷 Saldi';
   filtraInventario();
 }
 
@@ -201,36 +223,120 @@ function filtraInventario() {
 function renderProdotti(lista) {
   const grid = document.getElementById('gridProdotti');
   if (!lista.length) { grid.innerHTML = '<div style="color:var(--c3);">Nessun prodotto trovato.</div>'; return; }
-  grid.innerHTML = lista.map(p => `
-    <div class="inv-card">
-      <div class="inv-card-info">
-        <div class="inv-card-badges">
-          ${p.Speciale === 'SI' ? '<span class="badge badge-speciale">✂️</span>' : ''}
-          ${p.Categoria ? `<span class="badge">${p.Categoria}</span>` : ''}
-        </div>
-        <div class="inv-card-nome">${p.Nome}</div>
-        <div class="inv-card-sub">${[p.Taglia, p.Colore, p.Brand].filter(Boolean).join(' · ')}</div>
-        <div class="inv-card-bottom">
-          <div class="inv-card-prezzo">€ ${p.Prezzo}</div>
-          <div class="inv-card-qty ${parseInt(p.Quantità) <= 0 ? 'esaurito' : ''}">
-            ${parseInt(p.Quantità) > 0 ? p.Quantità + ' pz' : 'Esaurito'}
+
+  grid.innerHTML = lista.map(p => {
+    const prezzoBase  = parseFloat(p.Prezzo) || 0;
+    const prezzoSaldo = parseFloat(p.PrezzoSaldo) || 0;
+    const hasSaldo    = prezzoSaldo > 0;
+    const pctCorrente = hasSaldo ? Math.round((1 - prezzoSaldo / prezzoBase) * 100) : '';
+
+    const badgeSaldo = hasSaldo
+      ? `<span class="badge badge-saldo">-${pctCorrente}% · €${prezzoSaldo}</span>`
+      : '';
+
+    // Card normale
+    if (!_modalitaSaldi) return `
+      <div class="inv-card ${hasSaldo ? 'inv-card-insaldo' : ''}">
+        <div class="inv-card-info">
+          <div class="inv-card-badges">
+            ${p.Speciale === 'SI' ? '<span class="badge badge-speciale">✂️</span>' : ''}
+            ${p.Categoria ? `<span class="badge">${p.Categoria}</span>` : ''}
+            ${badgeSaldo}
+          </div>
+          <div class="inv-card-nome">${p.Nome}</div>
+          <div class="inv-card-sub">${[p.Taglia, p.Colore, p.Brand].filter(Boolean).join(' · ')}</div>
+          <div class="inv-card-bottom">
+            <div class="inv-card-prezzo ${hasSaldo ? 'saldato' : ''}">€ ${prezzoBase}</div>
+            ${hasSaldo ? `<div class="inv-card-prezzo-saldo">€ ${prezzoSaldo}</div>` : ''}
+            <div class="inv-card-qty ${parseInt(p.Quantità) <= 0 ? 'esaurito' : ''}">
+              ${parseInt(p.Quantità) > 0 ? p.Quantità + ' pz' : 'Esaurito'}
+            </div>
           </div>
         </div>
-      </div>
-      <div class="inv-card-foto" style="position:relative;">
-        ${p.Foto_URL ? `<img src="${p.Foto_URL}" alt="${p.Nome}" loading="lazy">` : `<span class="inv-nofoto">📷</span>`}
-        <button onclick="apriModifica('${p.SKU}')" style="
-          position:absolute; bottom:6px; right:6px;
-          width:28px; height:28px; border-radius:50%;
-          background:rgba(255,255,255,0.92); border:none;
-          box-shadow:0 2px 8px rgba(30,48,64,0.18);
-          cursor:pointer; font-size:13px; display:flex;
-          align-items:center; justify-content:center;
-          transition:transform 0.15s;
-        " onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">✏️</button>
-      </div>
-    </div>
-  `).join('');
+        <div class="inv-card-foto" style="position:relative;">
+          ${p.Foto_URL ? `<img src="${p.Foto_URL}" alt="${p.Nome}" loading="lazy">` : `<span class="inv-nofoto">📷</span>`}
+          <button onclick="apriModifica('${p.SKU}')" style="
+            position:absolute; bottom:6px; right:6px;
+            width:28px; height:28px; border-radius:50%;
+            background:rgba(255,255,255,0.92); border:none;
+            box-shadow:0 2px 8px rgba(30,48,64,0.18);
+            cursor:pointer; font-size:13px; display:flex;
+            align-items:center; justify-content:center;
+            transition:transform 0.15s;
+          " onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">✏️</button>
+        </div>
+      </div>`;
+
+    // Card modalità saldi — con input % inline
+    return `
+      <div class="inv-card inv-card-saldo-edit">
+        <div class="inv-card-info">
+          <div class="inv-card-nome">${p.Nome}</div>
+          <div class="inv-card-sub">${[p.Taglia, p.Colore, p.Brand].filter(Boolean).join(' · ')}</div>
+          <div style="display:flex; align-items:center; gap:10px; margin-top:8px; flex-wrap:wrap;">
+            <div style="font-size:13px; color:var(--c3); text-decoration:line-through;">€ ${prezzoBase}</div>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <input
+                type="number" min="0" max="90" step="5"
+                value="${pctCorrente}"
+                placeholder="%"
+                id="saldo-${p.SKU}"
+                oninput="aggiornaPrevSaldo('${p.SKU}', ${prezzoBase})"
+                style="width:60px; padding:6px 10px; border:1px solid rgba(91,135,160,0.3);
+                  border-radius:10px; font-size:13px; font-family:var(--font);
+                  background:white; color:var(--c6); text-align:center;"
+              ><span style="font-size:12px; color:var(--c3);">%</span>
+            </div>
+            <div id="prev-${p.SKU}" style="font-family:var(--serif); font-size:20px; font-weight:600; color:#b5451b; min-width:50px;">
+              ${hasSaldo ? '€ ' + prezzoSaldo : ''}
+            </div>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; justify-content:center; gap:6px; padding:12px; flex-shrink:0;">
+          <button onclick="applicaSaldo('${p.SKU}', ${prezzoBase})" style="
+            padding:8px 14px; background:var(--c4); color:white;
+            border:none; border-radius:999px; font-size:12px;
+            cursor:pointer; font-family:var(--font); white-space:nowrap;
+          ">✓ Applica</button>
+          ${hasSaldo ? `<button onclick="rimuoviSaldo('${p.SKU}')" style="
+            padding:8px 14px; background:rgba(181,69,27,0.08); color:#b5451b;
+            border:1px solid rgba(181,69,27,0.2); border-radius:999px; font-size:12px;
+            cursor:pointer; font-family:var(--font); white-space:nowrap;
+          ">✕ Rimuovi</button>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function aggiornaPrevSaldo(sku, prezzoBase) {
+  const pct    = parseFloat(document.getElementById('saldo-' + sku).value) || 0;
+  const prev   = document.getElementById('prev-' + sku);
+  const saldo  = calcolaSaldo(prezzoBase, pct);
+  prev.textContent = saldo !== null && pct > 0 ? '€ ' + saldo : '';
+}
+
+async function applicaSaldo(sku, prezzoBase) {
+  const pct   = parseFloat(document.getElementById('saldo-' + sku).value) || 0;
+  const saldo = calcolaSaldo(prezzoBase, pct);
+  if (!saldo || pct <= 0) { showToast('Inserisci una percentuale valida', 'error'); return; }
+  const res = await api({ action: 'aggiornaProdotto', sku, PrezzoSaldo: saldo });
+  if (res.success) {
+    // aggiorna cache locale
+    const p = prodottiCache.find(x => x.SKU === sku);
+    if (p) p.PrezzoSaldo = saldo;
+    showToast(`✅ Saldo applicato: € ${saldo}`, 'success');
+    filtraInventario();
+  } else showToast('❌ ' + (res.error || 'Errore'), 'error');
+}
+
+async function rimuoviSaldo(sku) {
+  const res = await api({ action: 'aggiornaProdotto', sku, PrezzoSaldo: 0 });
+  if (res.success) {
+    const p = prodottiCache.find(x => x.SKU === sku);
+    if (p) p.PrezzoSaldo = 0;
+    showToast('Saldo rimosso', '');
+    filtraInventario();
+  } else showToast('❌ ' + (res.error || 'Errore'), 'error');
 }
 
 // ============================================
