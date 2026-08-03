@@ -35,11 +35,13 @@ function jsonp(params) {
   return new Promise((resolve, reject) => {
     const cbName = 'cb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
     const script = document.createElement('script');
+    // Apps Script può impiegare molto più di 10s (cold start): timeout largo
+    // per evitare che lo script venga rimosso mentre la risposta è ancora in volo.
     const timeout = setTimeout(() => {
       delete window[cbName];
       if (script.parentNode) document.body.removeChild(script);
       reject(new Error('JSONP timeout'));
-    }, 10000);
+    }, 30000);
     window[cbName] = (data) => {
       clearTimeout(timeout);
       delete window[cbName];
@@ -57,8 +59,18 @@ function jsonp(params) {
   });
 }
 
-function api(params)   { return jsonp(params); }
-function apiPost(body) { return jsonp(body); }
+async function jsonpConRetry(params, tentativi = 2) {
+  for (let i = 0; i < tentativi; i++) {
+    try {
+      return await jsonp(params);
+    } catch (e) {
+      if (i === tentativi - 1) throw e;
+    }
+  }
+}
+
+function api(params)   { return jsonpConRetry(params); }
+function apiPost(body) { return jsonpConRetry(body); }
 
 // ============================================
 // POLLING — silenzioso, non blocca il tab
@@ -872,29 +884,6 @@ function renderStorico(da, a) {
       <td class="${mClass}">${mText}</td>
     </tr>`;
   }).join('');
-}
-
-// ============================================
-// MODAL RIEPILOGO VENDITA MULTIPLA
-// ============================================
-function mostraRiepilogo(capi) {
-  const totale = capi.reduce((s,c) => s + parseFloat(c.Prezzo||0), 0);
-  document.getElementById('riepilogoSub').textContent = capi.length + ' capo' + (capi.length !== 1 ? 'i' : '') + ' venduto' + (capi.length !== 1 ? 'i' : '');
-  document.getElementById('riepilogoLista').innerHTML = capi.map(c => `
-    <div class="riepilogo-row">
-      <div>
-        <div class="riepilogo-nome">${c.Nome}</div>
-        <div class="riepilogo-det">${[c.Taglia, c.Colore].filter(Boolean).join(' · ')}</div>
-      </div>
-      <div class="riepilogo-prezzo">€ ${c.Prezzo}</div>
-    </div>
-  `).join('');
-  document.getElementById('riepilogoTotale').textContent = '€ ' + totale.toFixed(2);
-  document.getElementById('riepilogoModal').style.display = 'flex';
-}
-
-function chiudiRiepilogo() {
-  document.getElementById('riepilogoModal').style.display = 'none';
 }
 
 // ============================================
