@@ -307,18 +307,21 @@
     } catch(e) {}
   }
 
-  // ── JSONP ─────────────────────────────────────────
-  function jsonp(params) {
-    return new Promise((resolve, reject) => {
-      const cb = 'cb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
-      const s  = document.createElement('script');
-      const t  = setTimeout(() => { cleanup(); reject(new Error('timeout')); }, 10000);
-      function cleanup() { clearTimeout(t); delete window[cb]; if (s.parentNode) document.body.removeChild(s); }
-      window[cb] = (data) => { cleanup(); resolve(data); };
-      s.onerror  = () => { cleanup(); reject(new Error('JSONP error')); };
-      s.src = CONFIG.APPS_SCRIPT_URL + '?' + new URLSearchParams({ ...params, callback: cb });
-      document.body.appendChild(s);
-    });
+  // ── API — fetch diretto (vedi app.js per la spiegazione) ──
+  async function jsonp(params, tentativi = 2) {
+    const url = CONFIG.APPS_SCRIPT_URL + '?' + new URLSearchParams(params);
+    for (let i = 0; i < tentativi; i++) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
+      try {
+        const res = await fetch(url, { signal: controller.signal });
+        return JSON.parse(await res.text());
+      } catch (e) {
+        if (i === tentativi - 1) throw e;
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
   }
 
   // ── INIT ──────────────────────────────────────────

@@ -29,48 +29,36 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ============================================
-// API — tutto via JSONP (risolve CORS con Apps Script)
+// API — fetch diretto (Apps Script risponde con CORS aperto).
+// JSONP via <script src> è stato abbandonato: la catena di redirect
+// di Apps Script a volte restituisce una pagina HTML intermedia che
+// il browser esegue come script, rompendo la callback JSONP.
+// fetch() segue i redirect HTTP nativamente senza questo rischio.
 // ============================================
-function jsonp(params) {
-  return new Promise((resolve, reject) => {
-    const cbName = 'cb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
-    const script = document.createElement('script');
-    // Apps Script può impiegare molto più di 10s (cold start): timeout largo
-    // per evitare che lo script venga rimosso mentre la risposta è ancora in volo.
-    const timeout = setTimeout(() => {
-      delete window[cbName];
-      if (script.parentNode) document.body.removeChild(script);
-      reject(new Error('JSONP timeout'));
-    }, 30000);
-    window[cbName] = (data) => {
-      clearTimeout(timeout);
-      delete window[cbName];
-      if (script.parentNode) document.body.removeChild(script);
-      resolve(data);
-    };
-    script.src = CONFIG.APPS_SCRIPT_URL + '?' + new URLSearchParams({ ...params, callback: cbName });
-    script.onerror = () => {
-      clearTimeout(timeout);
-      delete window[cbName];
-      if (script.parentNode) document.body.removeChild(script);
-      reject(new Error('JSONP error'));
-    };
-    document.body.appendChild(script);
-  });
+async function chiamaApi(params) {
+  const url = CONFIG.APPS_SCRIPT_URL + '?' + new URLSearchParams(params);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    const testo = await res.text();
+    return JSON.parse(testo);
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
-async function jsonpConRetry(params, tentativi = 2) {
+async function api(params, tentativi = 2) {
   for (let i = 0; i < tentativi; i++) {
     try {
-      return await jsonp(params);
+      return await chiamaApi(params);
     } catch (e) {
       if (i === tentativi - 1) throw e;
     }
   }
 }
 
-function api(params)   { return jsonpConRetry(params); }
-function apiPost(body) { return jsonpConRetry(body); }
+function apiPost(body) { return api(body); }
 
 // ============================================
 // POLLING — silenzioso, non blocca il tab
