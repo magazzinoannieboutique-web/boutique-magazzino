@@ -206,16 +206,22 @@ function toggleSaldi() {
   filtraInventario();
 }
 
+function matchStagione(p, filtro) {
+  return !filtro || !p.Stagione || p.Stagione === 'Tutte' || p.Stagione === filtro;
+}
+
 function filtraInventario() {
-  const testo = document.getElementById('filtroTesto').value.toLowerCase().trim();
-  const cat   = document.getElementById('filtroCategoria').value;
-  const brand = document.getElementById('filtroBrand').value;
-  const spec  = document.getElementById('filtroSpeciale').value;
+  const testo    = document.getElementById('filtroTesto').value.toLowerCase().trim();
+  const cat      = document.getElementById('filtroCategoria').value;
+  const brand    = document.getElementById('filtroBrand').value;
+  const spec     = document.getElementById('filtroSpeciale').value;
+  const stagione = document.getElementById('filtroStagione').value;
   renderProdotti(prodottiCache.filter(p =>
     (!testo || str(p.Nome).includes(testo) || str(p.SKU).includes(testo) || str(p.Brand).includes(testo)) &&
     (!cat   || p.Categoria === cat) &&
     (!brand || p.Brand === brand) &&
     (!spec  || p.Speciale === spec) &&
+    matchStagione(p, stagione) &&
     (_mostraEsauriti || parseInt(p.Quantità) > 0)
   ));
 }
@@ -234,6 +240,10 @@ function renderProdotti(lista) {
       ? `<span class="badge badge-saldo">-${pctCorrente}% · €${prezzoSaldo}</span>`
       : '';
 
+    const badgeStagione = p.Stagione === 'Estate' ? '<span class="badge">☀️</span>'
+      : p.Stagione === 'Inverno' ? '<span class="badge">❄️</span>'
+      : '';
+
     // Card normale
     if (!_modalitaSaldi) return `
       <div class="inv-card ${hasSaldo ? 'inv-card-insaldo' : ''}">
@@ -241,6 +251,7 @@ function renderProdotti(lista) {
           <div class="inv-card-badges">
             ${p.Speciale === 'SI' ? '<span class="badge badge-speciale">✂️</span>' : ''}
             ${p.Categoria ? `<span class="badge">${p.Categoria}</span>` : ''}
+            ${badgeStagione}
             ${badgeSaldo}
           </div>
           <div class="inv-card-nome">${p.Nome}</div>
@@ -355,6 +366,7 @@ function apriModifica(sku) {
   document.getElementById('mPrezzoAcquisto').value= p.PrezzoAcquisto || '';
   document.getElementById('mQuantita').value      = p.Quantità || 0;
   document.getElementById('mSpeciale').value      = p.Speciale || 'NO';
+  document.getElementById('mStagione').value      = p.Stagione || 'Tutte';
   document.getElementById('mNote').value          = p.Note || '';
   document.getElementById('modalModifica').style.display = 'flex';
 }
@@ -380,6 +392,7 @@ async function salvaModifica() {
     PrezzoAcquisto: document.getElementById('mPrezzoAcquisto').value.replace(',', '.'),
     Quantita:       document.getElementById('mQuantita').value,
     Speciale:       document.getElementById('mSpeciale').value,
+    Stagione:       document.getElementById('mStagione').value,
     Note:           document.getElementById('mNote').value.trim(),
   });
 
@@ -434,6 +447,7 @@ async function salvaProdotto() {
     Prezzo:         prezzoStr,
     PrezzoAcquisto: prezzoAcquistoStr,
     Speciale:       document.getElementById('pSpeciale').value,
+    Stagione:       document.getElementById('pStagione').value,
     Note:           document.getElementById('pNote').value.trim(),
     Foto_URL:       document.getElementById('pFoto').value,
   };
@@ -504,9 +518,11 @@ async function caricaEtichette() {
 }
 
 function filtraEtichette() {
-  const testo = document.getElementById('filtroEtichetta').value.toLowerCase();
+  const testo    = document.getElementById('filtroEtichetta').value.toLowerCase();
+  const stagione = document.getElementById('filtroStagioneEtichetta').value;
   renderEtichette(etichetteCache.filter(p =>
-    !testo || str(p.Nome).includes(testo) || str(p.SKU).includes(testo) || str(p.Brand).includes(testo)
+    (!testo || str(p.Nome).includes(testo) || str(p.SKU).includes(testo) || str(p.Brand).includes(testo)) &&
+    matchStagione(p, stagione)
   ));
 }
 

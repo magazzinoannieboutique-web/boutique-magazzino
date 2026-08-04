@@ -267,6 +267,15 @@
         <div class="foto-preview" id="fotoPreview"><img id="fotoPreviewImg" src="" alt=""></div>
         <input type="hidden" id="nuovaFotoUrl">
         <div class="divider"></div>
+        <div class="qty-wrap">
+          <div class="qty-label">Stagione</div>
+          <select id="selStagione" style="border:none; background:transparent; font-family:var(--font); font-size:14px; color:var(--c4); text-align:right;">
+            <option value="Tutte">Tutte</option>
+            <option value="Estate">☀️ Estate</option>
+            <option value="Inverno">❄️ Inverno</option>
+          </select>
+        </div>
+        <div class="divider"></div>
         <button class="btn btn-primary" onclick="salvaInventario()">💾 Salva</button>
         <button class="btn btn-ghost"   onclick="rescan()">↩ Scansiona ancora</button>
       </div>
@@ -408,6 +417,7 @@
     document.getElementById('rPrezzo').textContent = '€ ' + p.Prezzo;
     document.getElementById('rStock').textContent  = 'In magazzino: ' + p.Quantità + ' pz';
     document.getElementById('qtyVal').textContent  = qtyCorrente;
+    document.getElementById('selStagione').value   = p.Stagione || 'Tutte';
     document.getElementById('nuovaFotoUrl').value  = '';
     document.getElementById('fotoPreview').style.display = 'none';
     document.getElementById('btnFoto').textContent = '📷 Cambia foto';
@@ -518,8 +528,12 @@
   async function salvaInventario() {
     const btn = document.querySelector('#azioniInventario .btn-primary');
     btn.disabled = true; btn.textContent = '⏳ Salvataggio...';
-    const fotoUrl = document.getElementById('nuovaFotoUrl').value;
-    const ops = [jsonp({ action: 'aggiornaQuantita', sku: prodottoCorrente.SKU, quantita: qtyCorrente })];
+    const fotoUrl  = document.getElementById('nuovaFotoUrl').value;
+    const stagione = document.getElementById('selStagione').value;
+    const ops = [
+      jsonp({ action: 'aggiornaQuantita', sku: prodottoCorrente.SKU, quantita: qtyCorrente }),
+      jsonp({ action: 'aggiornaProdotto', sku: prodottoCorrente.SKU, Stagione: stagione })
+    ];
     if (fotoUrl) ops.push(jsonp({ action: 'aggiornaFoto', sku: prodottoCorrente.SKU, foto_url: fotoUrl }));
     await Promise.all(ops);
     btn.disabled = false; btn.textContent = '💾 Salva';

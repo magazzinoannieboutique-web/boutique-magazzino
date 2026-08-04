@@ -93,6 +93,11 @@
             <option value="">Tutti</option>
             <option value="SI">✂️ Solo speciali</option>
           </select>
+          <select class="form-select" style="max-width:160px;" id="filtroStagione" onchange="filtraInventario()">
+            <option value="">Tutte le stagioni</option>
+            <option value="Estate">☀️ Estate</option>
+            <option value="Inverno">❄️ Inverno</option>
+          </select>
           <button class="btn btn-ghost" id="btnMostraEsauriti" onclick="toggleEsauriti()">👻 Esauriti</button>
           <button class="btn btn-ghost" id="btnModalitaSaldi" onclick="toggleSaldi()">🏷 Saldi</button>
         </div>
@@ -145,9 +150,17 @@
             </div>
             <div class="card">
               <div style="font-size:10px; font-weight:500; color:var(--c3); text-transform:uppercase; letter-spacing:1px; margin-bottom:14px;">Opzioni</div>
-              <div class="form-group" style="margin-bottom:0;">
+              <div class="form-group">
                 <label class="form-label">Speciale</label>
                 <select class="form-select" id="pSpeciale"><option value="NO">No</option><option value="SI">Sì ✂️</option></select>
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Stagione</label>
+                <select class="form-select" id="pStagione">
+                  <option value="Tutte">Tutte</option>
+                  <option value="Estate">☀️ Estate</option>
+                  <option value="Inverno">❄️ Inverno</option>
+                </select>
               </div>
             </div>
             <button class="btn btn-primary" style="width:100%; justify-content:center; padding:14px; font-size:14px;" onclick="salvaProdotto()">Salva prodotto</button>
@@ -161,6 +174,11 @@
         <div class="card" style="margin-bottom:18px;">
           <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
             <input class="form-input" style="max-width:220px;" id="filtroEtichetta" placeholder="Cerca per nome, SKU..." oninput="filtraEtichette()">
+            <select class="form-select" style="max-width:160px;" id="filtroStagioneEtichetta" onchange="filtraEtichette()">
+              <option value="">Tutte le stagioni</option>
+              <option value="Estate">☀️ Estate</option>
+              <option value="Inverno">❄️ Inverno</option>
+            </select>
             <button class="btn btn-ghost" onclick="selezionaTutte()">Seleziona tutte</button>
             <button class="btn btn-ghost" onclick="deselezionaTutte()">Deseleziona tutte</button>
             <button class="btn btn-primary" onclick="stampaEtichette()">🖨️ Stampa selezionate</button>
@@ -242,6 +260,13 @@
         <div class="form-group"><label class="form-label">Quantità</label><input class="form-input" id="mQuantita" type="number"></div>
         <div class="form-group"><label class="form-label">Speciale</label>
           <select class="form-select" id="mSpeciale"><option value="NO">No</option><option value="SI">Sì ✂️</option></select>
+        </div>
+        <div class="form-group"><label class="form-label">Stagione</label>
+          <select class="form-select" id="mStagione">
+            <option value="Tutte">Tutte</option>
+            <option value="Estate">☀️ Estate</option>
+            <option value="Inverno">❄️ Inverno</option>
+          </select>
         </div>
         <div class="form-group" style="grid-column:1/-1;"><label class="form-label">Note</label><input class="form-input" id="mNote"></div>
       </div>
