@@ -36,10 +36,15 @@ document.addEventListener('DOMContentLoaded', () => {
 // il browser esegue come script, rompendo la callback JSONP.
 // fetch() segue i redirect HTTP nativamente senza questo rischio.
 // ============================================
+// 60s, non 30: Apps Script può metterci 8-30 secondi solo per avviare
+// l'esecuzione. Con 30s si abortivano richieste che sarebbero riuscite,
+// e per le scritture (non ritentabili) significava perdere il capo.
+const TIMEOUT_MS = 60000;
+
 async function chiamaApi(params) {
   const url = CONFIG.APPS_SCRIPT_URL + '?' + new URLSearchParams(params);
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30000);
+  const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
     const res = await fetch(url, { signal: controller.signal });
     const testo = await res.text();
@@ -666,13 +671,20 @@ async function salvaProdotto() {
   btn.textContent = tasks.length > 1 ? `⏳ Salvataggio 0/${tasks.length}...` : '⏳ Salvataggio...';
   btn.disabled = true;
 
-  const creati = [];   // { SKU, Nome, Taglia, Colore, Prezzo, Quantità }
+  const creati  = [];   // { SKU, Nome, Taglia, Colore, Prezzo, Quantità }
+  const incerti = [];   // varianti la cui risposta non è arrivata
   let interrotto = false;
-  try {
-    for (let i = 0; i < tasks.length; i++) {
-      if (tasks.length > 1) btn.textContent = `⏳ Salvataggio ${i+1}/${tasks.length}...`;
+
+  // Ogni variante viene tentata, anche se una fallisce: prima un errore
+  // interrompeva il ciclo e le varianti successive non venivano nemmeno
+  // provate. Un timeout non significa "non salvato" — il server può aver
+  // scritto e risposto troppo tardi — quindi quelle incerte si verificano
+  // rileggendo il foglio, invece di essere scartate in silenzio.
+  for (let i = 0; i < tasks.length; i++) {
+    if (tasks.length > 1) btn.textContent = `⏳ Salvataggio ${i+1}/${tasks.length}...`;
+    try {
       const res = await apiPost(tasks[i]);
-      if (res.success) {
+      if (res && res.success) {
         creati.push({
           SKU:        res.sku,
           Nome:       nome,
@@ -682,16 +694,58 @@ async function salvaProdotto() {
           Prezzo:     parseFloat(prezzoStr) || 0,
           'Quantità': tasks[i].Quantita,
         });
-      } else { showToast('❌ ' + (res.error || 'Errore'), 'error'); interrotto = true; break; }
+      } else {
+        // Errore esplicito del server: la riga non è stata scritta.
+        interrotto = true;
+        showToast('❌ ' + ((res && res.error) || 'Errore') +
+                  ' (' + [tasks[i].Taglia, tasks[i].Colore].filter(Boolean).join(' ') + ')', 'error');
+      }
+    } catch (e) {
+      // Timeout o rete: esito sconosciuto, da verificare sul foglio.
+      incerti.push(tasks[i]);
+      interrotto = true;
     }
-  } catch (e) {
-    // Timeout o rete: la scrittura può essere andata a buon fine comunque.
-    // I task hanno un token, quindi ripremere Salva non crea doppioni.
-    interrotto = true;
-    showToast('⚠️ Connessione lenta: premi di nuovo Salva per verificare (non creerà doppioni)', 'error');
-  } finally {
-    btn.textContent = 'Salva prodotto';
-    btn.disabled = false;
+  }
+
+  btn.textContent = 'Salva prodotto';
+  btn.disabled = false;
+
+  // Recupero delle varianti incerte: si rilegge il foglio e si cerca la
+  // combinazione nome+taglia+colore. Se c'è, era stata salvata.
+  if (incerti.length) {
+    btn.textContent = '⏳ Verifica...';
+    btn.disabled = true;
+    try {
+      const attuali = await getProdottiCached(true);   // forza il ricarico
+      let recuperate = 0;
+      incerti.forEach(t => {
+        const trovato = attuali.find(p =>
+          str(p.Nome) === str(nome) &&
+          str(p.Taglia) === str(t.Taglia) &&
+          str(p.Colore) === str(t.Colore));
+        if (trovato) {
+          recuperate++;
+          creati.push({
+            SKU:        trovato.SKU,
+            Nome:       trovato.Nome,
+            Taglia:     trovato.Taglia,
+            Colore:     trovato.Colore,
+            Brand:      trovato.Brand,
+            Prezzo:     parseFloat(trovato.Prezzo) || 0,
+            'Quantità': parseInt(trovato['Quantità']) || 1,
+          });
+        }
+      });
+      const persi = incerti.length - recuperate;
+      if (persi > 0) {
+        showToast(`⚠️ ${persi} variante/i non salvata/e: ripremi Salva (non crea doppioni)`, 'error');
+      }
+    } catch (e) {
+      showToast('⚠️ Connessione lenta: ripremi Salva per verificare (non crea doppioni)', 'error');
+    } finally {
+      btn.textContent = 'Salva prodotto';
+      btn.disabled = false;
+    }
   }
 
   // Tutto confermato: i token hanno esaurito il loro scopo. Senza questo
