@@ -6,13 +6,11 @@ const CONFIG = {
   // Google Apps Script — incolla qui il tuo URL dopo il deploy
   APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbz4ESzBiqfVcqtYtNqAP4_K7H4iERpqqFloHcKlOjrpUIDJGpaQpMD9pVtTgWv1akuE/exec',
 
-  // Cloudinary — inserisci dopo aver creato l'account
-  CLOUDINARY_CLOUD_NAME:    'dbsrurs8j',   // es. 'dxyz1234ab'
-  CLOUDINARY_UPLOAD_PRESET: 'boutique',                         // il nome del preset che hai creato
-
   // Generali
   NEGOZIO_NOME:      'Annie Boutique',
   VALUTA:            '€',
-  POLLING_INTERVAL:  2500,  // millisecondi tra un poll e l'altro sul portale
+  // Apps Script serializza le richieste per utente: un intervallo troppo
+  // corto riempie la coda e fa aspettare i salvataggi dietro al polling.
+  POLLING_INTERVAL:  5000,  // millisecondi tra un poll e l'altro sul portale
 
 };

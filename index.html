@@ -7,8 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=3">
-  <script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
+  <link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 
@@ -16,7 +15,6 @@
 <div id="scanModal" class="modal-overlay" style="display:none;">
   <div class="modal-box">
     <div id="smSpeciale" style="display:none;">✂️ Modifica speciale</div>
-    <div id="smFotoWrap"><img id="smFoto" src="" alt=""><div id="smFotoPlaceholder">📷</div></div>
     <div id="smBody">
       <div id="smNome"></div>
       <div id="smDettagli"></div>
@@ -46,6 +44,21 @@
     <!-- barra progressiva 15s -->
     <div style="height:3px; background:rgba(91,135,160,0.12); border-radius:0 0 28px 28px; overflow:hidden;">
       <div id="riepilogoBar" style="height:100%; background:var(--c4); width:100%;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ETICHETTE DEI CAPI APPENA CREATI -->
+<div id="modalNuoveEtichette" class="modal-overlay" style="display:none;">
+  <div class="modal-box" style="max-width:480px; padding:28px;">
+    <h2 style="font-family:var(--serif); font-size:24px; font-weight:500; color:var(--c6); margin-bottom:2px;">
+      Stampa etichette
+    </h2>
+    <p id="neSub" style="font-size:13px; color:var(--c3); margin-bottom:8px;"></p>
+    <div id="neLista" class="ne-lista" onchange="aggiornaConteggioNuove()"></div>
+    <div style="display:flex; gap:8px; justify-content:flex-end;">
+      <button class="btn btn-ghost" onclick="chiudiNuoveEtichette()">Chiudi</button>
+      <button class="btn btn-primary" id="neStampa" onclick="stampaNuoveEtichette()">🖨 Stampa</button>
     </div>
   </div>
 </div>
@@ -130,24 +143,24 @@
                   <div class="ss-dropdown" id="ssBrand-dropdown"></div>
                 </div>
               </div>
-              <div class="form-group"><label class="form-label">Taglia</label><input class="form-input" id="pTaglia" placeholder="es. S, M, L, 38" style="text-transform:uppercase;"></div>
-              <div class="form-group"><label class="form-label">Colore</label><input class="form-input" id="pColore" placeholder="es. Rosso, Nero"></div>
               <div class="form-group"><label class="form-label">Prezzo vendita (€)</label><input class="form-input" id="pPrezzo" type="number" placeholder="49.90" step="0.01"></div>
               <div class="form-group"><label class="form-label">Prezzo acquisto (€)</label><input class="form-input" id="pPrezzoAcquisto" type="number" placeholder="25.00" step="0.01"></div>
-              <div class="form-group"><label class="form-label">Quantità</label><input class="form-input" id="pQuantita" type="text" value="1" placeholder="es. 2, 3, 1"></div>
             </div>
             <div class="form-group"><label class="form-label">Note</label><input class="form-input" id="pNote" placeholder=""></div>
           </div>
-          <div style="display:flex; flex-direction:column; gap:14px;">
-            <div class="card">
-              <div style="font-size:10px; font-weight:500; color:var(--c3); text-transform:uppercase; letter-spacing:1px; margin-bottom:14px;">Foto</div>
-              <div id="fotoPreview" style="display:none; margin-bottom:12px;">
-                <img src="" alt="" style="width:100%; border-radius:12px; object-fit:cover; aspect-ratio:3/4;">
-              </div>
-              <button type="button" class="btn btn-ghost" style="width:100%; justify-content:center;" onclick="apriCloudinary()">📷 Carica foto</button>
-              <input type="hidden" id="pFoto">
-              <div id="fotoStatus" style="font-size:11px; color:var(--c3); margin-top:8px; text-align:center;">Nessuna foto</div>
+
+          <!-- VARIANTI: una riga = un capo con il suo SKU -->
+          <div class="card" style="margin-top:14px;">
+            <div style="font-size:10px; font-weight:500; color:var(--c3); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">Varianti</div>
+            <div style="font-size:12px; color:var(--c3); margin-bottom:14px;">
+              Una riga per ogni taglia/colore. Il <strong>＋</strong> aggiunge una riga mantenendo il colore.
             </div>
+            <div class="var-head">
+              <span>Taglia</span><span>Colore</span><span>Q.tà</span><span></span>
+            </div>
+            <div id="varianti"></div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:14px;">
             <div class="card">
               <div style="font-size:10px; font-weight:500; color:var(--c3); text-transform:uppercase; letter-spacing:1px; margin-bottom:14px;">Opzioni</div>
               <div class="form-group">
@@ -182,7 +195,9 @@
             <button class="btn btn-ghost" onclick="selezionaTutte()">Seleziona tutte</button>
             <button class="btn btn-ghost" onclick="deselezionaTutte()">Deseleziona tutte</button>
             <button class="btn btn-primary" onclick="stampaEtichette()">🖨️ Stampa selezionate</button>
+            <span id="contatoreSelezione" style="font-size:13px; color:var(--c4);"></span>
           </div>
+          <div id="etichetteInfo" style="font-size:13px; color:var(--c3); margin-top:14px; display:flex; align-items:center; flex-wrap:wrap; gap:4px;"></div>
         </div>
         <div id="listaEtichette">
           <div style="color:var(--c3); font-size:13px;">Caricamento...</div>
@@ -282,31 +297,6 @@
 <script src="config.js"></script>
 <script src="app.js"></script>
 <script>
-  // ============================================
-  // CLOUDINARY
-  // ============================================
-  function apriCloudinary() {
-    const widget = cloudinary.createUploadWidget({
-      cloudName:    CONFIG.CLOUDINARY_CLOUD_NAME,
-      uploadPreset: CONFIG.CLOUDINARY_UPLOAD_PRESET,
-      sources: ['local', 'camera'],
-      multiple: false,
-      maxFileSize: 20000000,
-      transformation: [{ width: 800, crop: 'limit', quality: 'auto' }],
-    }, (error, result) => {
-      if (!error && result && result.event === 'success') {
-        const url = result.info.secure_url;
-        document.getElementById('pFoto').value = url;
-        const preview = document.getElementById('fotoPreview');
-        preview.style.display = 'block';
-        preview.querySelector('img').src = url;
-        document.getElementById('fotoStatus').textContent = '✅ Foto caricata';
-        document.getElementById('fotoStatus').style.color = 'var(--success)';
-      }
-    });
-    widget.open();
-  }
-
   // ============================================
   // SMART SELECT — dropdown con ricerca + aggiungi
   // ============================================

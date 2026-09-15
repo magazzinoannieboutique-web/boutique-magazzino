@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   caricaDashboard();
+  initVarianti();
   avviaPolling();
 });
 
@@ -48,7 +49,19 @@ async function chiamaApi(params) {
   }
 }
 
+// Azioni che MODIFICANO i dati: non vanno mai ritentate alla cieca.
+// Apps Script può aver eseguito la scrittura e aver risposto oltre il timeout
+// del browser: un retry creava una seconda riga (il capo caricato doppio).
+const AZIONI_SCRITTURA = [
+  'addProdotto', 'vendiProdotto', 'aggiornaQuantita',
+  'addOpzione', 'aggiornaProdotto', 'eliminaProdotto',
+];
+
 async function api(params, tentativi = 2) {
+  // Su una scrittura un solo tentativo: meglio un errore da riprovare a mano
+  // che un doppione silenzioso.
+  if (AZIONI_SCRITTURA.indexOf(params.action) !== -1) tentativi = 1;
+
   for (let i = 0; i < tentativi; i++) {
     try {
       return await chiamaApi(params);
@@ -60,29 +73,80 @@ async function api(params, tentativi = 2) {
 
 function apiPost(body) { return api(body); }
 
+// Token univoco per rendere un inserimento ripetibile senza doppioni.
+// Prefisso temporale: il server ordina per chiave per scartare i più vecchi.
+function nuovoToken() {
+  return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+}
+
+// ============================================
+// CACHE PRODOTTI — condivisa tra inventario, etichette e storico.
+// Ognuno scaricava per conto proprio gli stessi ~360 KB: su Apps Script,
+// che serve una richiesta alla volta, ogni download in meno conta.
+// ============================================
+let _cacheProdotti = null;
+let _cacheTs        = 0;
+let _cacheInCorso   = null;      // promise condivisa: evita download paralleli
+const CACHE_TTL_MS  = 60000;
+
+async function getProdottiCached(forza = false) {
+  const fresca = _cacheProdotti && (Date.now() - _cacheTs) < CACHE_TTL_MS;
+  if (!forza && fresca) return _cacheProdotti;
+
+  // Se un download è già in volo, ci si aggancia invece di farne un altro.
+  if (_cacheInCorso) return _cacheInCorso;
+
+  _cacheInCorso = (async () => {
+    try {
+      const dati = await api({ action: 'getProdotti' });
+      if (!Array.isArray(dati)) throw new Error(dati && dati.error || 'Risposta non valida');
+      _cacheProdotti = dati;
+      _cacheTs = Date.now();
+      return dati;
+    } finally {
+      _cacheInCorso = null;
+    }
+  })();
+
+  return _cacheInCorso;
+}
+
+// Da chiamare dopo ogni scrittura, così la prossima lettura è fresca.
+function invalidaCacheProdotti() {
+  _cacheProdotti = null;
+  _cacheTs = 0;
+}
+
 // ============================================
 // POLLING — silenzioso, non blocca il tab
 // ============================================
 let pollingAttivo = true;
 
+// UNA sola chiamata per ciclo (scan + riepilogo insieme) invece di due.
+// Apps Script esegue una richiesta alla volta per utente: ogni richiesta di
+// polling in più allunga la coda in cui finiscono anche i salvataggi.
 function avviaPolling() {
   async function tick() {
-    if (!pollingAttivo) { setTimeout(tick, CONFIG.POLLING_INTERVAL); return; }
+    // Tab in secondo piano: niente polling. Una tab dimenticata aperta in
+    // negozio occupava la coda tutto il giorno per nulla.
+    if (!pollingAttivo || document.hidden) {
+      setTimeout(tick, CONFIG.POLLING_INTERVAL);
+      return;
+    }
+
     try {
-      const data = await api({ action: 'pollScan' });
-      if (data.scan && (!scanCorrente || scanCorrente.SKU !== data.scan.SKU)) {
+      const data = await api({ action: 'poll' });
+
+      if (data.scan && !data.scan.error &&
+          (!scanCorrente || scanCorrente.SKU !== data.scan.SKU)) {
         scanCorrente = data.scan;
         mostraModalScan(data.scan);
       }
-    } catch(e) {}
 
-    // Controlla anche riepilogo vendita multipla
-    try {
-      const r = await api({ action: 'getRiepilogo' });
-      if (r && r.riepilogo && r.riepilogo.length) {
-        mostraRiepilogo(r.riepilogo);
+      if (data.riepilogo && data.riepilogo.length) {
+        mostraRiepilogo(data.riepilogo);
       }
-    } catch(e) { /* route non ancora deployata, ignora */ }
+    } catch(e) {}
 
     setTimeout(tick, CONFIG.POLLING_INTERVAL);
   }
@@ -93,10 +157,6 @@ function avviaPolling() {
 // MODAL SCANSIONE — solo visualizzazione, vende solo il telefono
 // ============================================
 function mostraModalScan(p) {
-  const foto = document.getElementById('smFoto');
-  const placeholder = document.getElementById('smFotoPlaceholder');
-  if (p.Foto_URL) { foto.src = p.Foto_URL; foto.style.display = 'block'; placeholder.style.display = 'none'; }
-  else            { foto.style.display = 'none'; placeholder.style.display = 'block'; }
   document.getElementById('smSpeciale').style.display = p.Speciale === 'SI' ? 'block' : 'none';
   document.getElementById('smNome').textContent     = p.Nome;
   document.getElementById('smDettagli').textContent = [p.Taglia, p.Colore, p.Brand].filter(Boolean).join(' · ');
@@ -157,7 +217,7 @@ function chiudiRiepilogo() {
 // INVENTARIO
 // ============================================
 async function caricaInventario() {
-  prodottiCache = await api({ action: 'getProdotti' });
+  prodottiCache = await getProdottiCached();
 
   // Popola categorie
   const categorie = [...new Set(prodottiCache.map(p => p.Categoria).filter(Boolean))];
@@ -257,25 +317,14 @@ function renderProdotti(lista) {
           <div class="inv-card-nome">${p.Nome}</div>
           <div class="inv-card-sub">${[p.Taglia, p.Colore, p.Brand].filter(Boolean).join(' · ')}</div>
           <div class="inv-card-bottom">
-            <div class="inv-card-prezzo ${hasSaldo ? 'saldato' : ''}">€ ${prezzoBase}</div>
-            ${hasSaldo ? `<div class="inv-card-prezzo-saldo">€ ${prezzoSaldo}</div>` : ''}
-            <div class="inv-card-qty ${parseInt(p.Quantità) <= 0 ? 'esaurito' : ''}">
+            ${hasSaldo ? `<span class="inv-prezzo-barrato">€ ${prezzoBase}</span>` : ''}
+            <span class="inv-prezzo">€ ${hasSaldo ? prezzoSaldo : prezzoBase}</span>
+            <span class="inv-qty ${parseInt(p.Quantità) <= 0 ? 'esaurito' : ''}">
               ${parseInt(p.Quantità) > 0 ? p.Quantità + ' pz' : 'Esaurito'}
-            </div>
+            </span>
           </div>
         </div>
-        <div class="inv-card-foto" style="position:relative;">
-          ${p.Foto_URL ? `<img src="${p.Foto_URL}" alt="${p.Nome}" loading="lazy">` : `<span class="inv-nofoto">📷</span>`}
-          <button onclick="apriModifica('${p.SKU}')" style="
-            position:absolute; bottom:6px; right:6px;
-            width:28px; height:28px; border-radius:50%;
-            background:rgba(255,255,255,0.92); border:none;
-            box-shadow:0 2px 8px rgba(30,48,64,0.18);
-            cursor:pointer; font-size:13px; display:flex;
-            align-items:center; justify-content:center;
-            transition:transform 0.15s;
-          " onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">✏️</button>
-        </div>
+        <button class="inv-edit" onclick="apriModifica('${p.SKU}')" title="Modifica">✏️</button>
       </div>`;
 
     // Card modalità saldi — con input % inline
@@ -401,6 +450,7 @@ async function salvaModifica() {
   if (res.success) {
     chiudiModifica();
     showToast('✅ Prodotto aggiornato', 'success');
+    invalidaCacheProdotti();
     await caricaInventario();
     document.querySelector('nav a[data-section="inventario"]').click();
   } else {
@@ -422,16 +472,95 @@ async function eliminaProdotto() {
   if (res.success) {
     chiudiModifica();
     showToast('🗑 Prodotto eliminato', '');
+    invalidaCacheProdotti();
     await caricaInventario();
   } else {
     showToast('❌ ' + (res.error || 'Errore'), 'error');
   }
 }
-async function salvaProdotto() {
-  const nome    = document.getElementById('pNome').value.trim();
-  const tagliaRaw = document.getElementById('pTaglia').value.trim();
-  const qtaRaw  = document.getElementById('pQuantita').value.trim();
+// Token dell'ultimo inserimento non confermato, per un retry senza doppioni.
+let _tokenInSospeso = { firma: null, tokens: [] };
 
+// ============================================
+// VARIANTI — una riga per capo: taglia, colore, quantità.
+// Sostituisce i campi singoli con parsing di stringhe ("S,M,L" + "1,2,1"),
+// che non potevano esprimere combinazioni come "1 M blu, 2 L rosse".
+// ============================================
+function rigaVariante(taglia = '', colore = '', qta = 1) {
+  return `
+    <div class="var-row">
+      <input class="form-input var-taglia" placeholder="M" value="${escapeAttr(taglia)}"
+             style="text-transform:uppercase;">
+      <input class="form-input var-colore" placeholder="blu" value="${escapeAttr(colore)}">
+      <input class="form-input var-qta" type="number" min="1" value="${qta}">
+      <span class="var-azioni">
+        <button type="button" class="var-btn" onclick="aggiungiVariante(this)"
+                title="Aggiungi riga con lo stesso colore">＋</button>
+        <button type="button" class="var-btn var-btn-del" onclick="rimuoviVariante(this)"
+                title="Rimuovi riga">✕</button>
+      </span>
+    </div>`;
+}
+
+// I valori vanno dentro un attributo HTML: senza escape, un apice in
+// "blu chiaro 'vintage'" chiuderebbe l'attributo e romperebbe la riga.
+function escapeAttr(v) {
+  return String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function initVarianti() {
+  const c = document.getElementById('varianti');
+  if (c) c.innerHTML = rigaVariante();
+  aggiornaStatoVarianti();
+}
+
+// Nuova riga subito sotto quella premuta, con lo stesso colore: caricando
+// più taglie di un colore basta digitare la taglia.
+function aggiungiVariante(btn) {
+  const riga   = btn.closest('.var-row');
+  const colore = riga.querySelector('.var-colore').value;
+  riga.insertAdjacentHTML('afterend', rigaVariante('', colore, 1));
+  aggiornaStatoVarianti();
+  const nuova = riga.nextElementSibling;
+  if (nuova) nuova.querySelector('.var-taglia').focus();
+}
+
+function rimuoviVariante(btn) {
+  const righe = document.querySelectorAll('#varianti .var-row');
+  if (righe.length <= 1) {   // l'ultima si svuota, non si elimina
+    const r = righe[0];
+    r.querySelector('.var-taglia').value = '';
+    r.querySelector('.var-colore').value = '';
+    r.querySelector('.var-qta').value    = 1;
+    return;
+  }
+  btn.closest('.var-row').remove();
+  aggiornaStatoVarianti();
+}
+
+// Con una sola riga il pulsante di rimozione non serve.
+function aggiornaStatoVarianti() {
+  const righe = document.querySelectorAll('#varianti .var-row');
+  righe.forEach(r => {
+    const del = r.querySelector('.var-btn-del');
+    if (del) del.style.visibility = righe.length > 1 ? 'visible' : 'hidden';
+  });
+}
+
+// Legge le righe compilate. Una riga conta se ha taglia O colore: un capo
+// senza varianti (taglia unica, colore non rilevante) resta valido.
+function leggiVarianti() {
+  return [...document.querySelectorAll('#varianti .var-row')].map(r => ({
+    Taglia:   r.querySelector('.var-taglia').value.trim().toUpperCase(),
+    Colore:   r.querySelector('.var-colore').value.trim(),
+    Quantita: Math.max(1, parseInt(r.querySelector('.var-qta').value) || 1),
+  }));
+}
+
+async function salvaProdotto() {
+  const nome = document.getElementById('pNome').value.trim();
   if (!nome) { showToast('Il nome è obbligatorio', 'error'); return; }
 
   // Fix virgola→punto sui prezzi
@@ -443,67 +572,163 @@ async function salvaProdotto() {
     Nome:           nome,
     Categoria:      document.getElementById('pCategoria').value.trim(),
     Brand:          document.getElementById('pBrand').value.trim(),
-    Colore:         document.getElementById('pColore').value.trim(),
     Prezzo:         prezzoStr,
     PrezzoAcquisto: prezzoAcquistoStr,
     Speciale:       document.getElementById('pSpeciale').value,
     Stagione:       document.getElementById('pStagione').value,
     Note:           document.getElementById('pNote').value.trim(),
-    Foto_URL:       document.getElementById('pFoto').value,
   };
 
-  // Parsing multi-taglia: "S, M, 2L" → ['S','M','2L']
-  // Ogni voce può avere una quantità propria: "S:2, M:3, L:1"
-  // oppure tutte usano la quantità nel campo Quantità
-  const tagliaVoci = tagliaRaw
-    ? tagliaRaw.split(',').map(t => t.trim().toUpperCase()).filter(Boolean)
-    : [''];
+  const varianti = leggiVarianti();
 
-  // Parsing quantità per taglia: "2,3,1" oppure singolo "1"
-  const qtaVoci = qtaRaw.split(',').map(q => parseInt(q.trim()) || 1);
+  // Due righe con la stessa taglia E lo stesso colore sarebbero due capi
+  // identici: quasi sempre un errore di battitura, non un'intenzione.
+  const chiavi = varianti.map(v => v.Taglia + '|' + v.Colore.toLowerCase());
+  const dupe = chiavi.find((k, i) => chiavi.indexOf(k) !== i);
+  if (dupe !== undefined) {
+    showToast('❌ Due righe hanno la stessa taglia e colore', 'error');
+    return;
+  }
 
-  const tasks = tagliaVoci.map((taglia, i) => ({
+  // Un token per variante: se il salvataggio va in timeout e lo riprovi, il
+  // server riconosce il token e non crea una seconda riga.
+  // I token di un tentativo interrotto vengono riusati al tentativo dopo —
+  // è questo che rende sicuro ripremere Salva.
+  const firmaInserimento = JSON.stringify([datiBase, varianti]);
+  if (_tokenInSospeso.firma !== firmaInserimento) {
+    _tokenInSospeso = {
+      firma:  firmaInserimento,
+      tokens: varianti.map(() => nuovoToken()),
+    };
+  }
+
+  const tasks = varianti.map((v, i) => ({
     ...datiBase,
-    Taglia:   taglia,
-    Quantita: qtaVoci[i] !== undefined ? qtaVoci[i] : qtaVoci[0],
+    ...v,
+    token: _tokenInSospeso.tokens[i],
   }));
 
   const btn = document.querySelector('#sec-carica .btn-primary');
   btn.textContent = tasks.length > 1 ? `⏳ Salvataggio 0/${tasks.length}...` : '⏳ Salvataggio...';
   btn.disabled = true;
 
-  const skuGenerati = [];
-  for (let i = 0; i < tasks.length; i++) {
-    if (tasks.length > 1) btn.textContent = `⏳ Salvataggio ${i+1}/${tasks.length}...`;
-    const res = await apiPost(tasks[i]);
-    if (res.success) skuGenerati.push(res.sku);
-    else { showToast('❌ ' + (res.error || 'Errore'), 'error'); break; }
-  }
-
-  btn.textContent = 'Salva prodotto';
-  btn.disabled = false;
-
-  if (skuGenerati.length) {
-    const box = document.getElementById('skuGenerato');
-    box.innerHTML = `✅ ${skuGenerati.length > 1 ? skuGenerati.length + ' prodotti salvati' : 'Prodotto salvato'}: <strong>${skuGenerati.join(', ')}</strong>`;
-    box.style.display = 'block';
-    showToast(`✅ ${skuGenerati.length} prodotto/i salvato/i!`, 'success');
-
-    // Reset campi (mantieni nome, cat, brand, colore, prezzi per inserimento rapido taglie successive)
-    document.getElementById('pTaglia').value  = '';
-    document.getElementById('pQuantita').value = '1';
-    // Reset completo solo se taglia singola
-    if (tasks.length === 1) {
-      ['pNome','pCategoria','pBrand','pColore','pPrezzo','pPrezzoAcquisto','pNote','pFoto'].forEach(id => {
-        document.getElementById(id).value = '';
-      });
-      document.getElementById('fotoPreview').style.display = 'none';
-      document.getElementById('fotoStatus').textContent = 'Nessuna foto';
+  const creati = [];   // { SKU, Nome, Taglia, Colore, Prezzo, Quantità }
+  let interrotto = false;
+  try {
+    for (let i = 0; i < tasks.length; i++) {
+      if (tasks.length > 1) btn.textContent = `⏳ Salvataggio ${i+1}/${tasks.length}...`;
+      const res = await apiPost(tasks[i]);
+      if (res.success) {
+        creati.push({
+          SKU:        res.sku,
+          Nome:       nome,
+          Taglia:     tasks[i].Taglia,
+          Colore:     tasks[i].Colore,
+          Brand:      datiBase.Brand,
+          Prezzo:     parseFloat(prezzoStr) || 0,
+          'Quantità': tasks[i].Quantita,
+        });
+      } else { showToast('❌ ' + (res.error || 'Errore'), 'error'); interrotto = true; break; }
     }
-
-    // Scroll in cima alla sezione
-    document.getElementById('sec-carica').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (e) {
+    // Timeout o rete: la scrittura può essere andata a buon fine comunque.
+    // I task hanno un token, quindi ripremere Salva non crea doppioni.
+    interrotto = true;
+    showToast('⚠️ Connessione lenta: premi di nuovo Salva per verificare (non creerà doppioni)', 'error');
+  } finally {
+    btn.textContent = 'Salva prodotto';
+    btn.disabled = false;
   }
+
+  // Tutto confermato: i token hanno esaurito il loro scopo. Senza questo
+  // reset, reinserire lo stesso capo di proposito restituirebbe il primo SKU.
+  if (!interrotto) _tokenInSospeso = { firma: null, tokens: [] };
+
+  if (!creati.length) return;
+
+  invalidaCacheProdotti();  // la lista in cache è superata
+
+  const box = document.getElementById('skuGenerato');
+  box.innerHTML = `✅ ${creati.length > 1 ? creati.length + ' capi salvati' : 'Capo salvato'}: <strong>${creati.map(c => c.SKU).join(', ')}</strong>`;
+  box.style.display = 'block';
+  showToast(`✅ ${creati.length} capo/i salvato/i`, 'success');
+
+  // Reset: si mantengono nome, categoria, brand e prezzi per inserire
+  // rapidamente un capo simile; le varianti ripartono da una riga vuota.
+  initVarianti();
+  if (!interrotto) {
+    ['pNome','pCategoria','pBrand','pPrezzo','pPrezzoAcquisto','pNote'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+  }
+
+  mostraEtichetteNuove(creati);
+}
+
+// ============================================
+// MODAL ETICHETTE DEI CAPI APPENA CREATI
+// Evita di dover cercare a mano i capi appena inseriti nella sezione
+// Etichette per stamparli.
+// ============================================
+let _nuoviCreati = [];
+
+function mostraEtichetteNuove(creati) {
+  _nuoviCreati = creati;
+  const modal = document.getElementById('modalNuoveEtichette');
+  if (!modal) return;
+
+  document.getElementById('neSub').textContent =
+    creati.length + (creati.length === 1 ? ' capo creato' : ' capi creati');
+
+  document.getElementById('neLista').innerHTML = creati.map((c, i) => `
+    <label class="ne-row">
+      <input type="checkbox" class="ne-check" value="${i}" checked>
+      <span class="ne-info">
+        <span class="ne-nome">${c.Nome}</span>
+        <span class="ne-sub">${[c.Taglia, c.Colore].filter(Boolean).join(' · ')}${
+          c['Quantità'] > 1 ? ' — ' + c['Quantità'] + ' etichette' : ''}</span>
+      </span>
+      <span class="ne-sku">${c.SKU}</span>
+    </label>
+  `).join('');
+
+  aggiornaConteggioNuove();
+  modal.style.display = 'flex';
+}
+
+function aggiornaConteggioNuove() {
+  const scelti = [...document.querySelectorAll('.ne-check:checked')].map(c => +c.value);
+  // Il totale conta le copie: un capo con 3 pezzi stampa 3 etichette.
+  const copie = scelti.reduce((s, i) => s + (parseInt(_nuoviCreati[i]['Quantità']) || 1), 0);
+  const btn = document.getElementById('neStampa');
+  if (btn) {
+    btn.textContent = `🖨 Stampa (${copie})`;
+    btn.disabled = copie === 0;
+  }
+}
+
+function chiudiNuoveEtichette() {
+  const m = document.getElementById('modalNuoveEtichette');
+  if (m) m.style.display = 'none';
+  _nuoviCreati = [];
+}
+
+function stampaNuoveEtichette() {
+  const scelti = [...document.querySelectorAll('.ne-check:checked')].map(c => +c.value);
+  if (!scelti.length) return;
+
+  // Una copia per pezzo, senza chiedere: le quantità sono già state
+  // dichiarate riga per riga nel form.
+  const daStampare = [];
+  scelti.forEach(i => {
+    const c = _nuoviCreati[i];
+    const n = parseInt(c['Quantità']) || 1;
+    for (let k = 0; k < n; k++) daStampare.push(c);
+  });
+
+  chiudiNuoveEtichette();
+  apriFinestraEtichette(daStampare);
 }
 
 // ============================================
@@ -511,47 +736,195 @@ async function salvaProdotto() {
 // ============================================
 let etichetteCache = [];
 
+// Di norma si stampano i capi appena caricati: aprire su 1383 card è
+// inutile e lento. Default = capi dell'ultima data di carico presente nel
+// foglio (non "oggi": se carichi lunedì e stampi martedì, li ritrovi).
+let _soloUltimoLotto = true;
+let _ultimaData      = '';
+
+function dataCarico(p) {
+  return String(p.Data || '').substring(0, 10);
+}
+
+function formattaData(iso) {
+  if (!iso) return '';
+  const [a, m, g] = iso.split('-');
+  const mesi = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+  return `${parseInt(g)} ${mesi[parseInt(m) - 1] || ''} ${a}`;
+}
+
 async function caricaEtichette() {
-  const raw = await api({ action: 'getProdotti' });
-  etichetteCache = [...raw].reverse(); // ultimo inserito prima
-  renderEtichette(etichetteCache);
+  const el = document.getElementById('listaEtichette');
+  el.innerHTML = '<div style="color:var(--c3); font-size:13px;">Caricamento...</div>';
+  try {
+    const raw = await getProdottiCached();
+    etichetteCache = [...raw].reverse(); // ultimo inserito prima
+
+    // Data di carico più recente presente nei dati.
+    _ultimaData = etichetteCache
+      .map(dataCarico).filter(Boolean)
+      .sort().pop() || '';
+
+    filtraEtichette();
+  } catch (e) {
+    // Senza questo catch l'errore restava silenzioso: la pagina mostrava
+    // "Caricamento..." per sempre e i filtri lavoravano su una lista vuota,
+    // rispondendo "Nessun prodotto trovato".
+    etichetteCache = [];
+    el.innerHTML = `
+      <div style="color:var(--c3); font-size:13px; line-height:1.6;">
+        ⚠️ Caricamento non riuscito (connessione lenta o server occupato).
+        <button onclick="caricaEtichette()" style="
+          margin-top:10px; display:block; padding:8px 16px;
+          border:1px solid rgba(91,135,160,0.3); background:white;
+          color:#5b87a0; border-radius:10px; cursor:pointer; font-size:13px;
+        ">Riprova</button>
+      </div>`;
+  }
 }
 
 function filtraEtichette() {
-  const testo    = document.getElementById('filtroEtichetta').value.toLowerCase();
+  const testo    = document.getElementById('filtroEtichetta').value.toLowerCase().trim();
   const stagione = document.getElementById('filtroStagioneEtichetta').value;
+
+  // Cercare significa voler guardare in tutto il magazzino: il filtro del
+  // lotto si sospende da sé, altrimenti la ricerca sembrerebbe rotta.
+  const soloLotto = _soloUltimoLotto && !testo && _ultimaData;
+
   renderEtichette(etichetteCache.filter(p =>
-    (!testo || str(p.Nome).includes(testo) || str(p.SKU).includes(testo) || str(p.Brand).includes(testo)) &&
-    matchStagione(p, stagione)
+    (!testo || str(p.Nome).includes(testo) || str(p.SKU).includes(testo) ||
+               str(p.Brand).includes(testo) || str(p.Colore).includes(testo)) &&
+    matchStagione(p, stagione) &&
+    (!soloLotto || dataCarico(p) === _ultimaData)
   ));
+
+  aggiornaIntestazioneEtichette(soloLotto, testo);
 }
+
+function aggiornaIntestazioneEtichette(soloLotto, testo) {
+  const el = document.getElementById('etichetteInfo');
+  if (!el) return;
+
+  if (soloLotto) {
+    const n = etichetteCache.filter(p => dataCarico(p) === _ultimaData).length;
+    el.innerHTML = `Ultimo carico: <strong>${formattaData(_ultimaData)}</strong> · ${n} capi
+      <button class="btn btn-ghost" style="margin-left:10px; padding:5px 14px; font-size:12px;"
+              onclick="mostraTutteEtichette()">Mostra tutti (${etichetteCache.length})</button>`;
+  } else if (testo) {
+    el.innerHTML = `Ricerca su tutti i ${etichetteCache.length} capi`;
+  } else {
+    el.innerHTML = `Tutti i capi (${etichetteCache.length})
+      ${_ultimaData ? `<button class="btn btn-ghost" style="margin-left:10px; padding:5px 14px; font-size:12px;"
+              onclick="mostraSoloUltimoLotto()">Solo ultimo carico</button>` : ''}`;
+  }
+}
+
+function mostraTutteEtichette() {
+  _soloUltimoLotto = false;
+  filtraEtichette();
+}
+
+function mostraSoloUltimoLotto() {
+  _soloUltimoLotto = true;
+  document.getElementById('filtroEtichetta').value = '';
+  filtraEtichette();
+}
+
+// Rendering a blocchi: 1383 card sono ~24.000 nodi DOM su una pagina alta
+// 180.000px, e il browser resta bloccato su layout e paint. Mostrando i primi
+// BLOCCO_ETICHETTE e aggiungendo il resto quando serve, la pagina è utile
+// subito e il thread non si inchioda.
+const BLOCCO_ETICHETTE = 60;
+let _etichetteVisibili = [];
+let _etichetteMostrate = 0;
 
 function renderEtichette(lista) {
   const el = document.getElementById('listaEtichette');
   if (!lista.length) { el.innerHTML = '<div style="color:var(--c3);">Nessun prodotto trovato.</div>'; return; }
-  el.innerHTML = lista.map(p => `
-    <label class="et-card" onclick="">
-      <input type="checkbox" class="etichetta-check" value="${p.SKU}">
-      <div class="et-card-foto">
-        ${p.Foto_URL
-          ? `<img src="${p.Foto_URL}" alt="${p.Nome}" loading="lazy">`
-          : `<span class="et-card-nofoto">📷</span>`}
-      </div>
+
+  _etichetteVisibili = lista;
+  _etichetteMostrate = 0;
+  el.innerHTML = '';
+  mostraAltreEtichette();
+}
+
+function mostraAltreEtichette() {
+  const el = document.getElementById('listaEtichette');
+  const blocco = _etichetteVisibili.slice(
+    _etichetteMostrate, _etichetteMostrate + BLOCCO_ETICHETTE
+  );
+  if (!blocco.length) return;
+
+  // Il bottone "mostra altri" va rimosso prima di accodare il blocco nuovo,
+  // altrimenti resterebbe in mezzo alla lista.
+  const vecchio = el.querySelector('#etichetteAltro');
+  if (vecchio) vecchio.remove();
+
+  el.insertAdjacentHTML('beforeend', cardEtichette(blocco));
+  _etichetteMostrate += blocco.length;
+
+  const restanti = _etichetteVisibili.length - _etichetteMostrate;
+  if (restanti > 0) {
+    el.insertAdjacentHTML('beforeend', `
+      <div id="etichetteAltro" style="padding:16px 0; text-align:center;">
+        <button onclick="mostraAltreEtichette()" style="
+          padding:12px 24px; border:1px solid rgba(91,135,160,0.3);
+          background:white; color:#5b87a0; border-radius:12px;
+          cursor:pointer; font-size:14px;
+        ">Mostra altri ${Math.min(restanti, BLOCCO_ETICHETTE)} (ne restano ${restanti})</button>
+      </div>`);
+  }
+}
+
+function cardEtichette(lista) {
+  return lista.map(p => `
+    <label class="et-card">
+      <input type="checkbox" class="etichetta-check" value="${p.SKU}"
+             ${_etichetteSelezionate.has(p.SKU) ? 'checked' : ''}
+             onchange="toggleEtichetta(this.value, this.checked)">
       <div class="et-card-info">
         <div class="et-card-nome">${p.Nome}</div>
         <div class="et-card-taglia">${[p.Taglia, p.Colore, p.Brand].filter(Boolean).join(' · ')}</div>
         <div class="et-card-bottom">
-          <div class="et-card-prezzo">€ ${p.Prezzo}</div>
+          <span class="et-card-prezzo">€ ${p.Prezzo}</span>
           ${p.Speciale === 'SI' ? '<span class="badge badge-speciale">✂️</span>' : ''}
-          ${parseInt(p.Quantità) > 1 ? `<span class="badge" style="color:var(--c3);">${p.Quantità} pz</span>` : ''}
+          ${parseInt(p.Quantità) > 1 ? `<span class="et-card-qty">${p.Quantità} pz</span>` : ''}
         </div>
       </div>
     </label>
   `).join('');
 }
 
-function selezionaTutte()   { document.querySelectorAll('.etichetta-check').forEach(c => c.checked = true); }
-function deselezionaTutte() { document.querySelectorAll('.etichetta-check').forEach(c => c.checked = false); }
+// La selezione vive in un Set, non nel DOM: con il rendering a blocchi i
+// checkbox delle card non ancora mostrate non esistono, e "Seleziona tutte"
+// avrebbe selezionato solo quelle a schermo senza dirlo.
+let _etichetteSelezionate = new Set();
+
+function selezionaTutte() {
+  _etichetteSelezionate = new Set(_etichetteVisibili.map(p => p.SKU));
+  document.querySelectorAll('.etichetta-check').forEach(c => c.checked = true);
+  aggiornaContatoreSelezione();
+}
+
+function deselezionaTutte() {
+  _etichetteSelezionate.clear();
+  document.querySelectorAll('.etichetta-check').forEach(c => c.checked = false);
+  aggiornaContatoreSelezione();
+}
+
+// Tiene il Set allineato quando si spunta una singola card.
+function toggleEtichetta(sku, checked) {
+  if (checked) _etichetteSelezionate.add(sku);
+  else         _etichetteSelezionate.delete(sku);
+  aggiornaContatoreSelezione();
+}
+
+function aggiornaContatoreSelezione() {
+  const el = document.getElementById('contatoreSelezione');
+  if (!el) return;
+  const n = _etichetteSelezionate.size;
+  el.textContent = n ? `${n} selezionat${n === 1 ? 'o' : 'i'}` : '';
+}
 
 // Modal quantità etichette — più elegante del prompt nativo
 function chiediCopie(p) {
@@ -627,7 +1000,9 @@ function chiediCopie(p) {
 }
 
 async function stampaEtichette() {
-  const skus = [...document.querySelectorAll('.etichetta-check:checked')].map(c => c.value);
+  // Dal Set, non dal DOM: le card oltre il blocco visibile non hanno checkbox
+  // e sarebbero state escluse dalla stampa senza alcun avviso.
+  const skus = [..._etichetteSelezionate];
   if (!skus.length) { showToast('Seleziona almeno un prodotto', 'error'); return; }
   const selezionati = skus.map(sku => etichetteCache.find(p => p.SKU === sku)).filter(Boolean);
 
@@ -639,7 +1014,15 @@ async function stampaEtichette() {
   }
   if (!prodotti.length) return;
 
+  apriFinestraEtichette(prodotti);
+}
+
+// Apre la finestra di stampa per una lista già espansa in copie.
+// Condivisa tra la sezione Etichette e il modal dei capi appena creati,
+// così il formato dell'etichetta è definito in un solo posto.
+function apriFinestraEtichette(prodotti) {
   const win = window.open('', '_blank');
+  if (!win) { showToast('Consenti i popup per stampare', 'error'); return; }
   win.document.write(`<!DOCTYPE html>
 <html>
 <head>
@@ -683,6 +1066,14 @@ async function stampaEtichette() {
     .et-prezzo { font-size:12pt; font-weight:900; }
     .et-sep    { font-size:7pt; color:#bbb; }
     .et-taglia { font-size:9pt; font-weight:700; color:#444; }
+    /* Colore su riga propria: sui 25mm di sinistra non sta in linea con
+       prezzo e taglia senza rischiare il troncamento. */
+    .et-colore {
+      font-size:6pt; font-weight:700; color:#555;
+      text-transform:uppercase; letter-spacing:0.2pt;
+      max-width:22mm; white-space:nowrap;
+      overflow:hidden; text-overflow:ellipsis;
+    }
 
     .et-dx {
       width:25mm; flex-shrink:0;
@@ -739,6 +1130,13 @@ async function stampaEtichette() {
       });
     }
 
+    // Nome e colore arrivano dal foglio: se contengono < o & romperebbero
+    // l'HTML dell'etichetta.
+    function esc(v) {
+      return String(v == null ? '' : v)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
     async function init() {
       for (const p of prodotti) {
         const qrUrl = await buildQR(p.SKU, 76);
@@ -747,11 +1145,14 @@ async function stampaEtichette() {
         div.innerHTML =
           '<div class="et-sx">' +
             '<img class="et-logo" src="logo.png" alt="" onerror="this.hidden=true">' +
-            '<div class="et-nome">' + p.Nome + '</div>' +
+            '<div class="et-nome">' + esc(p.Nome) + '</div>' +
             '<div class="et-main">' +
               '<span class="et-prezzo">€ ' + (p.Prezzo || '—') + '</span>' +
-              (p.Taglia ? '<span class="et-sep">·</span><span class="et-taglia">' + p.Taglia + '</span>' : '') +
+              (p.Taglia ? '<span class="et-sep">·</span><span class="et-taglia">' + esc(p.Taglia) + '</span>' : '') +
             '</div>' +
+            // Il colore va stampato: senza, ogni scatola va aperta per sapere
+            // a quale variante appartiene l'etichetta.
+            (p.Colore ? '<div class="et-colore">' + esc(p.Colore) + '</div>' : '') +
           '</div>' +
           '<div class="et-dx">' +
             (qrUrl ? '<img class="et-qr-img" src="' + qrUrl + '" alt="QR">' : '') +
@@ -785,7 +1186,7 @@ let _prodottiMap     = {}; // SKU → PrezzoAcquisto
 async function caricaStorico() {
   const [vendite, prodotti] = await Promise.all([
     api({ action: 'getVendite' }),
-    api({ action: 'getProdotti' })
+    getProdottiCached()
   ]);
 
   _venditeCache = vendite;

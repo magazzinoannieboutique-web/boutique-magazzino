@@ -12,7 +12,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <script src="https://upload-widget.cloudinary.com/global/all.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -120,13 +119,6 @@
     /* RESULT */
     .result-inner { padding:18px; display:none; flex-direction:column; gap:10px; }
     .result-inner.show { display:flex; }
-    .r-foto { width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:16px; display:none; }
-    .r-foto.show { display:block; }
-    .r-foto-ph {
-      width:100%; aspect-ratio:4/3; background:rgba(91,135,160,0.07);
-      border-radius:16px; display:flex; align-items:center; justify-content:center;
-      font-size:40px; opacity:0.18;
-    }
     .r-speciale {
       display:none; align-self:flex-start;
       background:rgba(180,130,30,0.1); color:#8a6020;
@@ -168,8 +160,6 @@
     .qty-btn:hover { background:var(--c4); color:white; border-color:var(--c4); }
     .qty-val { font-family:var(--serif); font-size:28px; font-weight:500; color:var(--c4); min-width:36px; text-align:center; }
 
-    .foto-preview { display:none; }
-    .foto-preview img { width:100%; border-radius:12px; max-height:160px; object-fit:cover; }
 
     /* FEEDBACK */
     .feedback { display:none; flex-direction:column; align-items:center; justify-content:center; padding:44px 24px; gap:8px; text-align:center; }
@@ -234,8 +224,6 @@
 
     <!-- Risultato scansione -->
     <div class="result-inner" id="resultCard">
-      <img id="rFoto" class="r-foto" src="" alt="">
-      <div id="rFotoPlaceholder" class="r-foto-ph">📷</div>
       <div id="rSpeciale" class="r-speciale">✂️ Modifica speciale</div>
       <div class="r-nome"   id="rNome"></div>
       <div class="r-sub"    id="rSub"></div>
@@ -263,9 +251,6 @@
           <span class="qty-val" id="qtyVal">0</span>
           <button class="qty-btn" onclick="cambiaQty(+1)">+</button>
         </div>
-        <button class="btn btn-secondary" id="btnFoto" onclick="apriCloudinary()">📷 Cambia foto</button>
-        <div class="foto-preview" id="fotoPreview"><img id="fotoPreviewImg" src="" alt=""></div>
-        <input type="hidden" id="nuovaFotoUrl">
         <div class="divider"></div>
         <div class="qty-wrap">
           <div class="qty-label">Stagione</div>
@@ -317,8 +302,17 @@
   }
 
   // ── API — fetch diretto (vedi app.js per la spiegazione) ──
+  // Le azioni che modificano i dati non vanno ritentate: Apps Script può aver
+  // eseguito la scrittura e risposto oltre il timeout. Un retry su
+  // vendiProdotto scalava la quantità due volte e registrava due vendite.
+  const AZIONI_SCRITTURA = [
+    'addProdotto', 'vendiProdotto', 'aggiornaQuantita',
+    'addOpzione', 'aggiornaProdotto', 'eliminaProdotto',
+  ];
+
   async function jsonp(params, tentativi = 2) {
     const url = CONFIG.APPS_SCRIPT_URL + '?' + new URLSearchParams(params);
+    if (AZIONI_SCRITTURA.indexOf(params.action) !== -1) tentativi = 1;
     for (let i = 0; i < tentativi; i++) {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 30000);
@@ -406,11 +400,6 @@
     document.getElementById('feedback').classList.remove('show');
     document.getElementById('resultCard').classList.add('show');
 
-    const rFoto = document.getElementById('rFoto');
-    const rPh   = document.getElementById('rFotoPlaceholder');
-    if (p.Foto_URL) { rFoto.src = p.Foto_URL; rFoto.classList.add('show'); rPh.style.display = 'none'; }
-    else             { rFoto.classList.remove('show'); rPh.style.display = 'flex'; }
-
     document.getElementById('rSpeciale').style.display = p.Speciale === 'SI' ? 'inline-block' : 'none';
     document.getElementById('rNome').textContent   = p.Nome;
     document.getElementById('rSub').textContent    = [p.Taglia, p.Colore, p.Brand].filter(Boolean).join(' · ');
@@ -418,9 +407,6 @@
     document.getElementById('rStock').textContent  = 'In magazzino: ' + p.Quantità + ' pz';
     document.getElementById('qtyVal').textContent  = qtyCorrente;
     document.getElementById('selStagione').value   = p.Stagione || 'Tutte';
-    document.getElementById('nuovaFotoUrl').value  = '';
-    document.getElementById('fotoPreview').style.display = 'none';
-    document.getElementById('btnFoto').textContent = '📷 Cambia foto';
 
     const isSingola  = mode === 'vendita' && vtab === 'singola';
     const isMultipla = mode === 'vendita' && vtab === 'multipla';
@@ -528,35 +514,13 @@
   async function salvaInventario() {
     const btn = document.querySelector('#azioniInventario .btn-primary');
     btn.disabled = true; btn.textContent = '⏳ Salvataggio...';
-    const fotoUrl  = document.getElementById('nuovaFotoUrl').value;
     const stagione = document.getElementById('selStagione').value;
-    const ops = [
+    await Promise.all([
       jsonp({ action: 'aggiornaQuantita', sku: prodottoCorrente.SKU, quantita: qtyCorrente }),
       jsonp({ action: 'aggiornaProdotto', sku: prodottoCorrente.SKU, Stagione: stagione })
-    ];
-    if (fotoUrl) ops.push(jsonp({ action: 'aggiornaFoto', sku: prodottoCorrente.SKU, foto_url: fotoUrl }));
-    await Promise.all(ops);
+    ]);
     btn.disabled = false; btn.textContent = '💾 Salva';
     mostraFeedback('💾', 'Salvato!', prodottoCorrente.Nome + ' → ' + qtyCorrente + ' pz');
-  }
-
-  function apriCloudinary() {
-    const w = cloudinary.createUploadWidget({
-      cloudName: CONFIG.CLOUDINARY_CLOUD_NAME, uploadPreset: CONFIG.CLOUDINARY_UPLOAD_PRESET,
-      sources: ['camera','local'], multiple: false, maxFileSize: 5000000,
-      transformation: [{ width:800, crop:'limit', quality:'auto' }],
-    }, (error, result) => {
-      if (!error && result && result.event === 'success') {
-        const url = result.info.secure_url;
-        document.getElementById('nuovaFotoUrl').value = url;
-        document.getElementById('fotoPreviewImg').src = url;
-        document.getElementById('fotoPreview').style.display = 'block';
-        document.getElementById('rFoto').src = url; document.getElementById('rFoto').classList.add('show');
-        document.getElementById('rFotoPlaceholder').style.display = 'none';
-        document.getElementById('btnFoto').textContent = '✅ Foto caricata';
-      }
-    });
-    w.open();
   }
 
   // ── UTILS ─────────────────────────────────────────

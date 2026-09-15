@@ -321,14 +321,7 @@ tr:hover td { background: rgba(91,135,160,0.04); }
   text-align: center; letter-spacing: 1px; text-transform: uppercase;
   border-bottom: 1px solid rgba(180,130,30,0.15);
 }
-#smFotoWrap {
-  width: 100%; aspect-ratio: 16/9; background: rgba(91,135,160,0.08);
-  overflow: hidden; display: flex; align-items: center; justify-content: center;
-}
-#smFoto { width: 100%; height: 100%; object-fit: cover; display: none; }
-#smFotoPlaceholder { font-size: 48px; opacity: 0.15; }
-
-#smBody { padding: 20px 24px 4px; }
+#smBody { padding: 24px 24px 4px; }
 #smNome { font-family: var(--serif); font-size: 26px; font-weight: 500; line-height: 1.15; color: var(--c6); }
 #smDettagli { font-size: 12px; color: var(--c3); margin-top: 5px; letter-spacing: 0.3px; }
 #smPrezzo { font-family: var(--serif); font-size: 38px; font-weight: 600; color: var(--c4); margin-top: 10px; letter-spacing: -1px; }
@@ -434,61 +427,70 @@ tr:hover td { background: rgba(91,135,160,0.04); }
   gap: 12px;
 }
 
+/* Senza foto la card si dimensiona sul contenuto: l'altezza fissa di 130px
+   tagliava i prezzi lunghi e faceva sovrapporre il badge dei pezzi. */
 .et-card {
   display: flex;
-  align-items: stretch;
-  height: 130px;
+  align-items: flex-start;   /* allineato al nome, non al centro del blocco */
+  gap: 14px;
+  padding: 16px 18px;
   background: var(--surface);
   border: 1px solid rgba(255,255,255,0.8);
   border-radius: var(--r);
-  overflow: hidden;
   cursor: pointer;
   transition: box-shadow 0.2s, transform 0.2s;
   box-shadow: 0 2px 8px rgba(30,48,64,0.06);
-  position: relative;
 }
 .et-card:hover {
   box-shadow: 0 8px 24px rgba(30,48,64,0.13);
   transform: translateY(-2px);
 }
+/* Nel flusso, non più in posizione assoluta calcolata sull'altezza fissa. */
 .et-card input[type="checkbox"] {
-  position: absolute; top: 37px; left: 22px;
   width: 18px; height: 18px;
+  flex-shrink: 0;
   accent-color: var(--c4);
-  z-index: 2; cursor: pointer;
+  cursor: pointer;
+  margin: 1px 0 0;   /* sulla riga del nome */
 }
-
-.et-card-foto {
-  width: 90px; flex-shrink: 0;
-  background: rgba(91,135,160,0.07);
-  display: flex; align-items: center; justify-content: center;
-  overflow: hidden; order: 2;
-}
-.et-card-foto img { width: 100%; height: 100%; object-fit: cover; }
-.et-card-nofoto { font-size: 28px; opacity: 0.18; }
-
 .et-card-info {
-  flex: 1; padding: 16px 14px 16px 58px;
+  flex: 1; min-width: 0;
   display: flex; flex-direction: column;
-  justify-content: center; gap: 5px;
-  order: 1;
 }
-.et-card-nome { font-weight: 500; font-size: 14px; color: var(--c6); line-height: 1.3; }
-.et-card-taglia { font-size: 12px; color: var(--c3); }
-.et-card-bottom { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
-.et-card-prezzo { font-family: var(--serif); font-size: 20px; font-weight: 500; color: var(--c4); }
+.et-card-nome {
+  font-weight: 500; font-size: 14px; color: var(--c6);
+  line-height: 1.3; margin-bottom: 6px;
+}
+/* Taglia/colore/brand: è l'informazione che si legge in fase di stampa,
+   quindi ha lo stesso peso del nome. */
+.et-card-taglia {
+  font-size: 13px; font-weight: 500; color: var(--c3);
+  margin-bottom: 10px;
+}
+.et-card-bottom {
+  display: flex; align-items: baseline; gap: 10px;
+  flex-wrap: wrap;
+}
+.et-card-prezzo {
+  font-family: var(--serif); font-size: 20px;
+  font-weight: 500; color: var(--c4);
+  line-height: 1;
+}
+.et-card-qty { font-size: 13px; font-weight: 500; color: var(--c3); }
 
 /* ===== INVENTARIO CARD ===== */
 #gridProdotti { display: grid; gap: 10px; }
 
+/* Altezza sul contenuto: senza la foto i 130px fissi lasciavano un vuoto
+   a destra e schiacciavano il testo. */
 .inv-card {
   display: flex;
-  align-items: stretch;
-  height: 130px;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 18px;
   background: var(--surface);
   border: 1px solid rgba(255,255,255,0.8);
   border-radius: var(--r);
-  overflow: hidden;
   box-shadow: 0 2px 8px rgba(30,48,64,0.06);
   transition: box-shadow 0.2s, transform 0.2s;
 }
@@ -498,31 +500,58 @@ tr:hover td { background: rgba(91,135,160,0.04); }
 }
 
 .inv-card-info {
-  flex: 1; padding: 12px 12px 12px 16px;
+  flex: 1; min-width: 0;
   display: flex; flex-direction: column;
-  justify-content: center; gap: 3px;
-  min-width: 0;
 }
-.inv-card-badges { display: flex; gap: 5px; flex-wrap: wrap; }
+.inv-card-badges {
+  display: flex; gap: 5px; flex-wrap: wrap;
+  margin-bottom: 10px;
+}
 .inv-card-nome {
-  font-weight: 500; font-size: 13px; color: var(--c6);
+  font-weight: 500; font-size: 14px; color: var(--c6);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   line-height: 1.3;
+  margin-bottom: 8px;      /* più respiro sotto al nome */
 }
-.inv-card-sub { font-size: 11px; color: var(--c3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.inv-card-bottom { display: flex; align-items: center; gap: 10px; margin-top: 2px; }
-.inv-card-prezzo { font-family: var(--serif); font-size: 17px; font-weight: 500; color: var(--c4); }
-.inv-card-qty { font-size: 11px; color: var(--c3); }
-.inv-card-qty.esaurito { color: #b5451b; font-weight: 500; }
+/* Taglia · colore · brand: alzata a 13px/500, era troppo debole a 11px. */
+.inv-card-sub {
+  font-size: 13px; font-weight: 500; color: var(--c3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-bottom: 12px;
+}
+/* Riga finale uniformata: allineata sulla linea di base, un solo passo di
+   dimensioni tra prezzo barrato, prezzo corrente e pezzi. */
+.inv-card-bottom {
+  display: flex; align-items: baseline; gap: 10px;
+  flex-wrap: wrap;
+}
+.inv-prezzo {
+  font-family: var(--serif); font-size: 19px;
+  font-weight: 500; color: var(--c4);
+  line-height: 1;
+}
+.inv-prezzo-barrato {
+  font-family: var(--serif); font-size: 15px;
+  color: var(--c3); text-decoration: line-through;
+  line-height: 1;
+}
+.inv-qty { font-size: 13px; font-weight: 500; color: var(--c3); }
+.inv-qty.esaurito { color: #b5451b; }
 
-.inv-card-foto {
-  width: 130px; flex-shrink: 0;
-  background: rgba(91,135,160,0.07);
+/* Matita: era dentro il riquadro foto, ora è un pulsante della card. */
+.inv-edit {
+  flex-shrink: 0;
+  width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(255,255,255,0.92); border: 1px solid rgba(91,135,160,0.18);
+  box-shadow: 0 2px 8px rgba(30,48,64,0.10);
+  cursor: pointer; font-size: 14px;
   display: flex; align-items: center; justify-content: center;
-  overflow: hidden; position: relative;
+  transition: transform 0.15s, box-shadow 0.15s;
 }
-.inv-card-foto img { width: 100%; height: 100%; object-fit: cover; }
-.inv-nofoto { font-size: 22px; opacity: 0.15; }
+.inv-edit:hover {
+  transform: scale(1.08);
+  box-shadow: 0 4px 12px rgba(30,48,64,0.16);
+}
 
 /* ===== SALDI ===== */
 #btnModalitaSaldi.attivo { background: rgba(181,69,27,0.10); color: #b5451b; border-color: rgba(181,69,27,0.25); }
@@ -531,19 +560,77 @@ tr:hover td { background: rgba(91,135,160,0.04); }
 
 .inv-card-insaldo { border-color: rgba(181,69,27,0.2); }
 
-.inv-card-prezzo.saldato {
-  text-decoration: line-through;
-  color: var(--c3);
-  font-size: 13px;
-}
-.inv-card-prezzo-saldo {
-  font-family: var(--serif);
-  font-size: 17px; font-weight: 500;
-  color: #b5451b;
-}
+/* Su una card in saldo il prezzo corrente è quello scontato: si colora di
+   rosso per distinguerlo, il pieno resta barrato accanto. */
+.inv-card-insaldo .inv-prezzo { color: #b5451b; }
 
 .inv-card-saldo-edit {
   height: auto; min-height: 90px;
   border-color: rgba(181,69,27,0.15);
   background: rgba(255,248,245,0.9);
 }
+/* ===== VARIANTI (caricamento bulk) ===== */
+/* Una riga = un capo con il suo SKU: taglia, colore, quantità. */
+/* Header e righe condividono la stessa griglia: la quarta colonna è larga
+   quanto i due pulsanti (34px + 34px + 4px di gap), così "Q.tà" resta
+   sopra il suo campo invece di slittare a destra. */
+.var-head, .var-row {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr 70px 72px;
+  gap: 8px;
+  align-items: center;
+}
+.var-head {
+  font-size: 10px; font-weight: 500; color: var(--c3);
+  text-transform: uppercase; letter-spacing: 1px;
+  padding: 0 2px 6px;
+}
+.var-row { margin-bottom: 8px; }
+.var-row input { margin: 0; }
+.var-row .form-input { padding: 10px 12px; font-size: 13px; }
+.var-azioni { display: flex; gap: 4px; }
+.var-btn {
+  width: 34px; height: 34px; flex-shrink: 0;
+  border: 1px solid rgba(91,135,160,0.25);
+  background: white; color: var(--c4);
+  border-radius: 10px; cursor: pointer;
+  font-size: 16px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+}
+.var-btn:hover { background: rgba(91,135,160,0.08); }
+.var-btn-del { color: #b5451b; border-color: rgba(181,69,27,0.25); }
+.var-btn-del:hover { background: rgba(181,69,27,0.07); }
+
+/* Su schermo stretto le righe diventano blocchi con etichette proprie. */
+@media (max-width: 640px) {
+  .var-head { display: none; }
+  .var-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    padding: 12px;
+    margin-bottom: 10px;
+    border: 1px solid rgba(91,135,160,0.15);
+    border-radius: 12px;
+  }
+  .var-azioni { grid-column: 1 / -1; justify-content: flex-end; }
+}
+
+/* ===== MODAL ETICHETTE POST-SALVATAGGIO ===== */
+.ne-lista {
+  max-height: 46vh; overflow-y: auto;
+  margin: 4px 0 18px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.ne-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  background: rgba(91,135,160,0.05);
+  border-radius: 12px;
+  cursor: pointer;
+}
+.ne-row input { width: 17px; height: 17px; accent-color: var(--c4); flex-shrink: 0; margin: 0; }
+.ne-info { flex: 1; min-width: 0; }
+.ne-nome { font-size: 13px; font-weight: 500; color: var(--c6); }
+.ne-sub  { font-size: 12px; font-weight: 500; color: var(--c3); margin-top: 3px; }
+.ne-sku  { font-family: monospace; font-size: 11px; color: var(--c3); flex-shrink: 0; }
