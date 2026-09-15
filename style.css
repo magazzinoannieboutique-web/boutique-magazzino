@@ -219,6 +219,13 @@ main { padding: 0; }
   box-shadow: 0 0 0 3px rgba(91,135,160,0.15);
   background: white;
 }
+/* Il placeholder deve leggersi come suggerimento, non come valore già
+   inserito: più chiaro e in corsivo, così la differenza è inequivocabile. */
+.form-input::placeholder {
+  color: rgba(138,180,200,0.65);
+  font-style: italic;
+  font-weight: 300;
+}
 
 /* ===== TABELLA ===== */
 .table-wrap { overflow-x: auto; }
@@ -639,8 +646,16 @@ tr:hover td { background: rgba(91,135,160,0.04); }
 /* Le intestazioni seguono l'allineamento dei rispettivi campi. */
 .var-head span:first-child,
 .var-head span:nth-child(3) { text-align: center; }
-.var-row { margin-bottom: 10px; }
+.var-row { margin-bottom: 10px; border-radius: 12px; }
 .var-row input { margin: 0; }
+/* Riga vuota su cui si è premuto "+": lampeggia per indicare cosa manca. */
+.var-row-errore { animation: varErrore 1.2s ease; }
+@keyframes varErrore {
+  0%, 100% { background: transparent; }
+  15%, 60% { background: rgba(181,69,27,0.12); }
+}
+.var-row-errore .var-taglia,
+.var-row-errore .var-colore { border-color: rgba(181,69,27,0.55); }
 /* Campi più alti e testo più grande: si compilano a mano, in negozio. */
 .var-row .form-input {
   padding: 13px 10px;

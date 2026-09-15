@@ -4,7 +4,7 @@
 const CONFIG = {
 
   // Google Apps Script — incolla qui il tuo URL dopo il deploy
-  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbz4ESzBiqfVcqtYtNqAP4_K7H4iERpqqFloHcKlOjrpUIDJGpaQpMD9pVtTgWv1akuE/exec',
+  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbzxN0iDqQCQXgGyRbYXbNwgpJFwJ3Aryd2KagSCU8JpJ_fYkGnySTIp4Vt65-ziVDk7/exec',
 
   // Generali
   NEGOZIO_NOME:      'Annie Boutique',

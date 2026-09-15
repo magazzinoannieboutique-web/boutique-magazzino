@@ -553,9 +553,21 @@ function saldoCaricaPct() {
 // Nuova riga subito sotto quella premuta, con lo stesso colore: caricando
 // più taglie di un colore basta digitare la taglia.
 function aggiungiVariante(btn) {
-  const riga   = btn.closest('.var-row');
-  const colore = riga.querySelector('.var-colore').value;
-  riga.insertAdjacentHTML('afterend', rigaVariante('', colore, 1));
+  const riga    = btn.closest('.var-row');
+  const taglia  = riga.querySelector('.var-taglia');
+  const colore  = riga.querySelector('.var-colore');
+
+  // Riga vuota: aggiungerne un'altra creerebbe due capi identici.
+  // Si segnala il campo invece di procedere in silenzio.
+  if (!taglia.value.trim() && !colore.value.trim()) {
+    riga.classList.add('var-row-errore');
+    setTimeout(() => riga.classList.remove('var-row-errore'), 1200);
+    taglia.focus();
+    showToast('Compila taglia o colore prima di aggiungere una riga', 'error');
+    return;
+  }
+
+  riga.insertAdjacentHTML('afterend', rigaVariante('', colore.value, 1));
   aggiornaStatoVarianti();
   const nuova = riga.nextElementSibling;
   if (nuova) nuova.querySelector('.var-taglia').focus();
@@ -1103,21 +1115,27 @@ function apriFinestraEtichette(prodotti) {
       width:25mm; flex-shrink:0;
       display:flex; flex-direction:column;
       align-items:center; justify-content:center;
-      gap:2mm; padding:1.5mm;
+      gap:1.2mm; padding:1.5mm;
       border-right:0.2mm solid #ddd;
     }
-    .et-logo { width:20mm; height:auto; max-height:10mm; object-fit:contain; }
-    .et-main { display:flex; align-items:baseline; gap:1mm; line-height:1; }
-    .et-prezzo { font-size:12pt; font-weight:900; }
-    .et-sep    { font-size:7pt; color:#bbb; }
-    .et-taglia { font-size:9pt; font-weight:700; color:#444; }
-    /* Colore su riga propria: sui 25mm di sinistra non sta in linea con
-       prezzo e taglia senza rischiare il troncamento. */
+    .et-logo { width:19mm; height:auto; max-height:8mm; object-fit:contain; }
+    /* Prezzo su una riga da solo. */
+    .et-prezzo { font-size:13pt; font-weight:900; line-height:1; }
+    /* Taglia e colore insieme sulla riga sotto: devono starci entrambi,
+       quindi il colore si accorcia con l'ellissi se serve. */
+    .et-tc {
+      display:flex; align-items:baseline; justify-content:center;
+      gap:1mm; line-height:1; max-width:22mm;
+    }
+    .et-taglia { font-size:8.5pt; font-weight:700; color:#333; flex-shrink:0; }
+    .et-sep    { font-size:6pt; color:#bbb; flex-shrink:0; }
+    /* Corpo contenuto e nessuna spaziatura extra: un colore come
+       "scacco beige" deve entrare per intero accanto alla taglia. */
     .et-colore {
       font-size:6pt; font-weight:700; color:#555;
-      text-transform:uppercase; letter-spacing:0.2pt;
-      max-width:22mm; white-space:nowrap;
-      overflow:hidden; text-overflow:ellipsis;
+      text-transform:uppercase; letter-spacing:0;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      min-width:0;
     }
 
     .et-dx {
@@ -1191,13 +1209,16 @@ function apriFinestraEtichette(prodotti) {
           '<div class="et-sx">' +
             '<img class="et-logo" src="logo.png" alt="" onerror="this.hidden=true">' +
             '<div class="et-nome">' + esc(p.Nome) + '</div>' +
-            '<div class="et-main">' +
-              '<span class="et-prezzo">€ ' + (p.Prezzo || '—') + '</span>' +
-              (p.Taglia ? '<span class="et-sep">·</span><span class="et-taglia">' + esc(p.Taglia) + '</span>' : '') +
-            '</div>' +
-            // Il colore va stampato: senza, ogni scatola va aperta per sapere
-            // a quale variante appartiene l'etichetta.
-            (p.Colore ? '<div class="et-colore">' + esc(p.Colore) + '</div>' : '') +
+            '<div class="et-prezzo">€ ' + (p.Prezzo || '—') + '</div>' +
+            // Taglia e colore sulla stessa riga: il colore va stampato,
+            // altrimenti ogni scatola va aperta per sapere quale variante è.
+            ((p.Taglia || p.Colore)
+              ? '<div class="et-tc">' +
+                  (p.Taglia ? '<span class="et-taglia">' + esc(p.Taglia) + '</span>' : '') +
+                  (p.Taglia && p.Colore ? '<span class="et-sep">·</span>' : '') +
+                  (p.Colore ? '<span class="et-colore">' + esc(p.Colore) + '</span>' : '') +
+                '</div>'
+              : '') +
           '</div>' +
           '<div class="et-dx">' +
             (qrUrl ? '<img class="et-qr-img" src="' + qrUrl + '" alt="QR">' : '') +
