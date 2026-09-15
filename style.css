@@ -507,7 +507,6 @@ tr:hover td { background: rgba(91,135,160,0.04); }
 .inv-card-badges {
   display: flex; gap: 5px; flex-wrap: wrap;
   margin-bottom: 10px;
-  padding-right: 40px;
 }
 .inv-card-nome {
   font-weight: 500; font-size: 14px; color: var(--c6);
@@ -543,7 +542,7 @@ tr:hover td { background: rgba(91,135,160,0.04); }
 /* Matita fuori dal flusso: se partecipa al layout, con più badge la riga
    si spezza in due e le card non hanno più la stessa altezza. */
 .inv-edit {
-  position: absolute; top: 14px; right: 14px;
+  position: absolute; bottom: 14px; right: 14px;
   width: 32px; height: 32px; border-radius: 50%;
   background: rgba(255,255,255,0.92); border: 1px solid rgba(91,135,160,0.18);
   box-shadow: 0 2px 8px rgba(30,48,64,0.10);
