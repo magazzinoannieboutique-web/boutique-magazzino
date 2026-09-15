@@ -486,13 +486,13 @@ tr:hover td { background: rgba(91,135,160,0.04); }
 .inv-card {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
   padding: 16px 18px;
   background: var(--surface);
   border: 1px solid rgba(255,255,255,0.8);
   border-radius: var(--r);
   box-shadow: 0 2px 8px rgba(30,48,64,0.06);
   transition: box-shadow 0.2s, transform 0.2s;
+  position: relative;   /* riferimento per la matita */
 }
 .inv-card:hover {
   box-shadow: 0 8px 24px rgba(30,48,64,0.12);
@@ -503,9 +503,11 @@ tr:hover td { background: rgba(91,135,160,0.04); }
   flex: 1; min-width: 0;
   display: flex; flex-direction: column;
 }
+/* padding-right: tiene i badge lontani dalla matita in alto a destra. */
 .inv-card-badges {
   display: flex; gap: 5px; flex-wrap: wrap;
   margin-bottom: 10px;
+  padding-right: 40px;
 }
 .inv-card-nome {
   font-weight: 500; font-size: 14px; color: var(--c6);
@@ -538,9 +540,10 @@ tr:hover td { background: rgba(91,135,160,0.04); }
 .inv-qty { font-size: 13px; font-weight: 500; color: var(--c3); }
 .inv-qty.esaurito { color: #b5451b; }
 
-/* Matita: era dentro il riquadro foto, ora è un pulsante della card. */
+/* Matita fuori dal flusso: se partecipa al layout, con più badge la riga
+   si spezza in due e le card non hanno più la stessa altezza. */
 .inv-edit {
-  flex-shrink: 0;
+  position: absolute; top: 14px; right: 14px;
   width: 32px; height: 32px; border-radius: 50%;
   background: rgba(255,255,255,0.92); border: 1px solid rgba(91,135,160,0.18);
   box-shadow: 0 2px 8px rgba(30,48,64,0.10);
@@ -569,49 +572,87 @@ tr:hover td { background: rgba(91,135,160,0.04); }
   border-color: rgba(181,69,27,0.15);
   background: rgba(255,248,245,0.9);
 }
+/* ===== CARICA PRODOTTO ===== */
+/* Titolo e Salva sulla stessa riga. */
+.carica-header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+/* Solo il bottone diretto dell'header, non quelli dentro il form. */
+.carica-header > .btn { padding: 11px 26px; font-size: 14px; }
+
+/* Il bottone Saldi occupa il posto di un campo: stessa altezza degli input
+   accanto, altrimenti la riga sembra disallineata. */
+#btnSaldoCarica { padding: 11px 14px; font-size: 13px; white-space: nowrap; }
+#boxSaldoCarica .form-input { padding: 11px 10px; }
+
+/* Prezzi, speciale, stagione e saldo su una riga: i campi numerici ospitano
+   4-5 cifre, non serve la larghezza di un campo di testo. */
+.riga-prezzi {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0 14px;
+}
+@media (max-width: 860px) {
+  .riga-prezzi { grid-template-columns: 1fr 1fr; }
+}
+
 /* ===== VARIANTI (caricamento bulk) ===== */
-/* Una riga = un capo con il suo SKU: taglia, colore, quantità. */
-/* Header e righe condividono la stessa griglia: la quarta colonna è larga
-   quanto i due pulsanti (34px + 34px + 4px di gap), così "Q.tà" resta
-   sopra il suo campo invece di slittare a destra. */
+/* Una riga = un capo con il suo SKU: taglia, colore, quantità.
+   Header e righe condividono la griglia: la quarta colonna è larga quanto
+   i due pulsanti, così "Q.tà" resta sopra il suo campo. */
 .var-head, .var-row {
   display: grid;
-  grid-template-columns: 1fr 1.4fr 70px 72px;
-  gap: 8px;
+  grid-template-columns: 1fr 1.4fr 90px 100px;
+  gap: 10px;
   align-items: center;
 }
 .var-head {
   font-size: 10px; font-weight: 500; color: var(--c3);
   text-transform: uppercase; letter-spacing: 1px;
-  padding: 0 2px 6px;
+  padding: 0 2px 8px;
 }
-.var-row { margin-bottom: 8px; }
+.var-row { margin-bottom: 10px; }
 .var-row input { margin: 0; }
-.var-row .form-input { padding: 10px 12px; font-size: 13px; }
-.var-azioni { display: flex; gap: 4px; }
-.var-btn {
-  width: 34px; height: 34px; flex-shrink: 0;
-  border: 1px solid rgba(91,135,160,0.25);
-  background: white; color: var(--c4);
-  border-radius: 10px; cursor: pointer;
-  font-size: 16px; line-height: 1;
-  display: flex; align-items: center; justify-content: center;
-  transition: background 0.15s, border-color 0.15s;
+/* Campi più alti e testo più grande: si compilano a mano, in negozio. */
+.var-row .form-input {
+  padding: 13px 14px;
+  font-size: 15px; font-weight: 400;
 }
-.var-btn:hover { background: rgba(91,135,160,0.08); }
-.var-btn-del { color: #b5451b; border-color: rgba(181,69,27,0.25); }
-.var-btn-del:hover { background: rgba(181,69,27,0.07); }
+.var-row .var-qta { text-align: center; }
+.var-azioni { display: flex; gap: 8px; }
+.var-btn {
+  width: 42px; height: 42px; flex-shrink: 0;
+  border: 1px solid transparent;
+  border-radius: 12px; cursor: pointer;
+  font-size: 20px; font-weight: 500; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, transform 0.12s;
+}
+.var-btn:hover { transform: scale(1.06); }
+/* Verde = aggiungi, rosso = rimuovi: si distinguono senza leggere. */
+.var-btn-add {
+  background: rgba(58,125,90,0.12); color: var(--success);
+  border-color: rgba(58,125,90,0.3);
+}
+.var-btn-add:hover { background: rgba(58,125,90,0.2); }
+.var-btn-del {
+  background: rgba(181,69,27,0.1); color: #b5451b;
+  border-color: rgba(181,69,27,0.28);
+}
+.var-btn-del:hover { background: rgba(181,69,27,0.18); }
 
-/* Su schermo stretto le righe diventano blocchi con etichette proprie. */
+/* Su schermo stretto le righe diventano blocchi. */
 @media (max-width: 640px) {
   .var-head { display: none; }
   .var-row {
     grid-template-columns: 1fr 1fr;
-    gap: 6px;
-    padding: 12px;
-    margin-bottom: 10px;
+    gap: 8px;
+    padding: 14px;
+    margin-bottom: 12px;
     border: 1px solid rgba(91,135,160,0.15);
-    border-radius: 12px;
+    border-radius: 14px;
   }
   .var-azioni { grid-column: 1 / -1; justify-content: flex-end; }
 }

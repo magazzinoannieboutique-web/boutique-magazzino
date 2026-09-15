@@ -323,8 +323,8 @@ function renderProdotti(lista) {
               ${parseInt(p.Quantità) > 0 ? p.Quantità + ' pz' : 'Esaurito'}
             </span>
           </div>
+          <button class="inv-edit" onclick="apriModifica('${p.SKU}')" title="Modifica">✏️</button>
         </div>
-        <button class="inv-edit" onclick="apriModifica('${p.SKU}')" title="Modifica">✏️</button>
       </div>`;
 
     // Card modalità saldi — con input % inline
@@ -494,8 +494,8 @@ function rigaVariante(taglia = '', colore = '', qta = 1) {
       <input class="form-input var-colore" placeholder="blu" value="${escapeAttr(colore)}">
       <input class="form-input var-qta" type="number" min="1" value="${qta}">
       <span class="var-azioni">
-        <button type="button" class="var-btn" onclick="aggiungiVariante(this)"
-                title="Aggiungi riga con lo stesso colore">＋</button>
+        <button type="button" class="var-btn var-btn-add" onclick="aggiungiVariante(this)"
+                title="Aggiungi riga con lo stesso colore">+</button>
         <button type="button" class="var-btn var-btn-del" onclick="rimuoviVariante(this)"
                 title="Rimuovi riga">✕</button>
       </span>
@@ -514,6 +514,40 @@ function initVarianti() {
   const c = document.getElementById('varianti');
   if (c) c.innerHTML = rigaVariante();
   aggiornaStatoVarianti();
+}
+
+// ============================================
+// SALDO IN CARICAMENTO — stesso comportamento dell'inventario:
+// il bottone si trasforma nell'input della percentuale, la ✕ lo annulla.
+// ============================================
+function apriSaldoCarica() {
+  document.getElementById('btnSaldoCarica').style.display = 'none';
+  document.getElementById('boxSaldoCarica').style.display = 'flex';
+  document.getElementById('pSaldoPct').focus();
+}
+
+function annullaSaldoCarica() {
+  document.getElementById('pSaldoPct').value = '';
+  document.getElementById('boxSaldoCarica').style.display = 'none';
+  document.getElementById('btnSaldoCarica').style.display = 'flex';
+  document.getElementById('anteprimaSaldo').style.display = 'none';
+}
+
+// Mostra a quanto viene venduto, così la percentuale si verifica a occhio.
+function aggiornaAnteprimaSaldo() {
+  const el   = document.getElementById('anteprimaSaldo');
+  const pct  = parseFloat(document.getElementById('pSaldoPct').value) || 0;
+  const base = parseFloat((document.getElementById('pPrezzo').value || '').replace(',', '.')) || 0;
+  const saldo = calcolaSaldo(base, pct);
+  if (!saldo) { el.style.display = 'none'; return; }
+  el.textContent = '→ € ' + saldo;
+  el.style.display = 'block';
+}
+
+// Percentuale di saldo attiva, 0 se nessuna.
+function saldoCaricaPct() {
+  if (document.getElementById('boxSaldoCarica').style.display === 'none') return 0;
+  return parseFloat(document.getElementById('pSaldoPct').value) || 0;
 }
 
 // Nuova riga subito sotto quella premuta, con lo stesso colore: caricando
@@ -567,6 +601,13 @@ async function salvaProdotto() {
   const prezzoStr         = document.getElementById('pPrezzo').value.replace(',', '.');
   const prezzoAcquistoStr = document.getElementById('pPrezzoAcquisto').value.replace(',', '.');
 
+  // Saldo applicato in caricamento: si invia il prezzo scontato calcolato
+  // con la stessa funzione usata dall'inventario.
+  const pctSaldo = saldoCaricaPct();
+  const prezzoSaldo = pctSaldo > 0
+    ? (calcolaSaldo(parseFloat(prezzoStr) || 0, pctSaldo) || 0)
+    : 0;
+
   const datiBase = {
     action:         'addProdotto',
     Nome:           nome,
@@ -574,6 +615,7 @@ async function salvaProdotto() {
     Brand:          document.getElementById('pBrand').value.trim(),
     Prezzo:         prezzoStr,
     PrezzoAcquisto: prezzoAcquistoStr,
+    PrezzoSaldo:    prezzoSaldo,
     Speciale:       document.getElementById('pSpeciale').value,
     Stagione:       document.getElementById('pStagione').value,
     Note:           document.getElementById('pNote').value.trim(),
@@ -608,7 +650,7 @@ async function salvaProdotto() {
     token: _tokenInSospeso.tokens[i],
   }));
 
-  const btn = document.querySelector('#sec-carica .btn-primary');
+  const btn = document.getElementById('btnSalvaProdotto');
   btn.textContent = tasks.length > 1 ? `⏳ Salvataggio 0/${tasks.length}...` : '⏳ Salvataggio...';
   btn.disabled = true;
 
@@ -661,6 +703,9 @@ async function salvaProdotto() {
       const el = document.getElementById(id);
       if (el) el.value = '';
     });
+    // Il saldo va azzerato: lasciarlo attivo lo applicherebbe di nascosto
+    // al capo successivo.
+    annullaSaldoCarica();
   }
 
   mostraEtichetteNuove(creati);
