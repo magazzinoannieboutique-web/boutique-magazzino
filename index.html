@@ -125,74 +125,77 @@
         </div>
         <div id="skuGenerato" style="display:none; background:rgba(91,135,160,0.08); border:1px solid rgba(91,135,160,0.2); border-radius:12px; padding:10px 16px; font-size:13px; color:var(--c4); margin-bottom:20px;"></div>
 
-        <div class="card">
-          <div class="form-group">
-            <label class="form-label">Nome *</label>
-            <input class="form-input" id="pNome" placeholder="es. Vestito Floreale">
-          </div>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:0 16px;">
-            <div class="form-group">
-              <label class="form-label">Categoria</label>
-              <div class="smart-select" id="ssCategoria">
-                <input class="form-input" id="pCategoria" placeholder="Cerca o aggiungi..." autocomplete="off" oninput="filtraSmartSelect('ssCategoria','pCategoria')" onfocus="apriSmartSelect('ssCategoria','pCategoria')" onblur="chiudiSmartSelect('ssCategoria')">
-                <div class="ss-dropdown" id="ssCategoria-dropdown"></div>
-              </div>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Brand</label>
-              <div class="smart-select" id="ssBrand">
-                <input class="form-input" id="pBrand" placeholder="Cerca o aggiungi..." autocomplete="off" oninput="filtraSmartSelect('ssBrand','pBrand')" onfocus="apriSmartSelect('ssBrand','pBrand')" onblur="chiudiSmartSelect('ssBrand')">
-                <div class="ss-dropdown" id="ssBrand-dropdown"></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Prezzi, speciale, stagione e saldo su una riga sola -->
-          <div class="riga-prezzi">
-            <div class="form-group">
-              <label class="form-label">Prezzo vendita</label>
-              <input class="form-input" id="pPrezzo" type="number" placeholder="49.90" step="0.01">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Prezzo acquisto</label>
-              <input class="form-input" id="pPrezzoAcquisto" type="number" placeholder="25.00" step="0.01">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Speciale</label>
-              <select class="form-select" id="pSpeciale"><option value="NO">No</option><option value="SI">Sì ✂️</option></select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Stagione</label>
-              <select class="form-select" id="pStagione">
-                <option value="Tutte">Tutte</option>
-                <option value="Estate">☀️ Estate</option>
-                <option value="Inverno">❄️ Inverno</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Saldo</label>
-              <!-- Il bottone si trasforma nell'input della percentuale, come in inventario -->
+        <div style="display:grid; grid-template-columns: 1.6fr 1fr; gap:20px; align-items:start;">
+          <div class="card">
+            <div class="card-head">
+              <span class="card-head-titolo">Dati prodotto</span>
+              <!-- Saldo: il bottone si trasforma nell'input della percentuale,
+                   con la ✕ per annullare, come in inventario. -->
               <button type="button" class="btn btn-ghost" id="btnSaldoCarica"
-                      style="width:100%; justify-content:center;" onclick="apriSaldoCarica()">🏷 Saldi</button>
-              <div id="boxSaldoCarica" style="display:none; align-items:center; gap:6px;">
+                      onclick="apriSaldoCarica()">🏷 Saldi</button>
+              <span id="boxSaldoCarica" class="box-saldo">
                 <input class="form-input" id="pSaldoPct" type="number" min="1" max="90"
-                       placeholder="%" style="text-align:center;" oninput="aggiornaAnteprimaSaldo()">
+                       placeholder="%" oninput="aggiornaAnteprimaSaldo()">
+                <span id="anteprimaSaldo"></span>
                 <button type="button" class="var-btn var-btn-del" onclick="annullaSaldoCarica()"
                         title="Rimuovi sconto">✕</button>
-              </div>
-              <div id="anteprimaSaldo" style="font-size:12px; color:#b5451b; margin-top:6px; display:none;"></div>
+              </span>
             </div>
+            <div class="form-group">
+              <label class="form-label">Nome *</label>
+              <input class="form-input" id="pNome" placeholder="es. Vestito Floreale">
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0 16px;">
+              <div class="form-group">
+                <label class="form-label">Categoria</label>
+                <div class="smart-select" id="ssCategoria">
+                  <input class="form-input" id="pCategoria" placeholder="Cerca o aggiungi..." autocomplete="off" oninput="filtraSmartSelect('ssCategoria','pCategoria')" onfocus="apriSmartSelect('ssCategoria','pCategoria')" onblur="chiudiSmartSelect('ssCategoria')">
+                  <div class="ss-dropdown" id="ssCategoria-dropdown"></div>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Brand</label>
+                <div class="smart-select" id="ssBrand">
+                  <input class="form-input" id="pBrand" placeholder="Cerca o aggiungi..." autocomplete="off" oninput="filtraSmartSelect('ssBrand','pBrand')" onfocus="apriSmartSelect('ssBrand','pBrand')" onblur="chiudiSmartSelect('ssBrand')">
+                  <div class="ss-dropdown" id="ssBrand-dropdown"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Prezzi, speciale e stagione su una riga sola -->
+            <div class="riga-prezzi">
+              <div class="form-group">
+                <label class="form-label">Prezzo vendita</label>
+                <input class="form-input" id="pPrezzo" type="number" placeholder="49.90" step="0.01" oninput="aggiornaAnteprimaSaldo()">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Prezzo acquisto</label>
+                <input class="form-input" id="pPrezzoAcquisto" type="number" placeholder="25.00" step="0.01">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Speciale</label>
+                <select class="form-select" id="pSpeciale"><option value="NO">No</option><option value="SI">Sì ✂️</option></select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Stagione</label>
+                <select class="form-select" id="pStagione">
+                  <option value="Tutte">Tutte</option>
+                  <option value="Estate">☀️ Estate</option>
+                  <option value="Inverno">❄️ Inverno</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Note</label><input class="form-input" id="pNote" placeholder=""></div>
           </div>
 
-          <div class="form-group" style="margin-bottom:0;"><label class="form-label">Note</label><input class="form-input" id="pNote" placeholder=""></div>
-        </div>
-
-        <!-- VARIANTI: una riga = un capo con il suo SKU -->
-        <div class="card" style="margin-top:14px;">
-          <div class="var-head">
-            <span>Taglia</span><span>Colore</span><span>Q.tà</span><span></span>
+          <!-- VARIANTI: una riga = un capo con il suo SKU -->
+          <div class="card">
+            <div class="var-head">
+              <span>Taglia</span><span>Colore</span><span>Q.tà</span><span></span>
+            </div>
+            <div id="varianti"></div>
           </div>
-          <div id="varianti"></div>
         </div>
       </section>
 
