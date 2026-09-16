@@ -94,7 +94,61 @@ let _cacheTs        = 0;
 let _cacheInCorso   = null;      // promise condivisa: evita download paralleli
 const CACHE_TTL_MS  = 60000;
 
-async function getProdottiCached(forza = false) {
+// I prodotti vengono ricordati nel browser: Apps Script fallisce a
+// intermittenza (404 casuali) e senza memoria locale ogni apertura
+// dipendeva da una richiesta che poteva non arrivare mai.
+const LS_PRODOTTI = 'annie_prodotti_v1';
+
+function leggiProdottiLocali() {
+  try {
+    const raw = localStorage.getItem(LS_PRODOTTI);
+    if (!raw) return null;
+    const d = JSON.parse(raw);
+    if (!Array.isArray(d.prodotti) || !d.prodotti.length) return null;
+    return d;
+  } catch (e) { return null; }   // storage negato o dato corrotto
+}
+
+function salvaProdottiLocali(prodotti) {
+  try {
+    localStorage.setItem(LS_PRODOTTI, JSON.stringify({ prodotti, ts: Date.now() }));
+  } catch (e) { /* spazio esaurito: non è critico */ }
+}
+
+// Scarica a blocchi invece di 330 KB in un colpo: un blocco che fallisce
+// si ritenta da solo e costa pochi secondi, non quaranta.
+const BLOCCO_SERVER = 200;
+
+async function scaricaTuttiProdotti(onProgresso) {
+  const tutti = [];
+  let da = 0, totale = null;
+
+  for (let giro = 0; giro < 40; giro++) {   // limite di sicurezza
+    let pag = null;
+    // Tre tentativi per blocco, con attesa crescente: i 404 sono casuali,
+    // quindi ritentare lo stesso blocco funziona.
+    for (let t = 0; t < 3; t++) {
+      try {
+        pag = await api({ action: 'getPagina', da, quanti: BLOCCO_SERVER }, 1);
+        if (pag && Array.isArray(pag.prodotti)) break;
+        pag = null;
+      } catch (e) { pag = null; }
+      if (t < 2) await new Promise(r => setTimeout(r, 1000 * (t + 1)));
+    }
+    if (!pag) throw new Error('Blocco non scaricato (da ' + da + ')');
+
+    tutti.push(...pag.prodotti);
+    if (totale === null) totale = pag.totale || 0;
+    da += (pag.letti || pag.prodotti.length || BLOCCO_SERVER);
+
+    if (onProgresso) onProgresso(Math.min(da, totale), totale);
+    if (pag.fine) break;
+  }
+
+  return tutti;
+}
+
+async function getProdottiCached(forza = false, onProgresso = null) {
   const fresca = _cacheProdotti && (Date.now() - _cacheTs) < CACHE_TTL_MS;
   if (!forza && fresca) return _cacheProdotti;
 
@@ -103,10 +157,11 @@ async function getProdottiCached(forza = false) {
 
   _cacheInCorso = (async () => {
     try {
-      const dati = await api({ action: 'getProdotti' });
-      if (!Array.isArray(dati)) throw new Error(dati && dati.error || 'Risposta non valida');
+      const dati = await scaricaTuttiProdotti(onProgresso);
+      if (!dati.length) throw new Error('Nessun dato ricevuto');
       _cacheProdotti = dati;
       _cacheTs = Date.now();
+      salvaProdottiLocali(dati);
       return dati;
     } finally {
       _cacheInCorso = null;
@@ -114,6 +169,31 @@ async function getProdottiCached(forza = false) {
   })();
 
   return _cacheInCorso;
+}
+
+// Dati mostrabili subito: memoria di sessione, poi quella del browser.
+// Restituisce null se non c'è nulla di ricordato.
+function prodottiSubito() {
+  if (_cacheProdotti) return { prodotti: _cacheProdotti, ts: _cacheTs, fresco: true };
+  const locali = leggiProdottiLocali();
+  if (locali) {
+    _cacheProdotti = locali.prodotti;   // riusabile da tutte le sezioni
+    _cacheTs = 0;                       // 0 = da aggiornare
+    return { prodotti: locali.prodotti, ts: locali.ts, fresco: false };
+  }
+  return null;
+}
+
+// "3 minuti fa", per dire quanto sono vecchi i dati mostrati.
+function quantoFa(ts) {
+  if (!ts) return '';
+  const min = Math.floor((Date.now() - ts) / 60000);
+  if (min < 1)  return 'ora';
+  if (min < 60) return min + ' min fa';
+  const ore = Math.floor(min / 60);
+  if (ore < 24) return ore + (ore === 1 ? ' ora fa' : ' ore fa');
+  const gg = Math.floor(ore / 24);
+  return gg + (gg === 1 ? ' giorno fa' : ' giorni fa');
 }
 
 // Da chiamare dopo ogni scrittura, così la prossima lettura è fresca.
@@ -130,11 +210,44 @@ let pollingAttivo = true;
 // UNA sola chiamata per ciclo (scan + riepilogo insieme) invece di due.
 // Apps Script esegue una richiesta alla volta per utente: ogni richiesta di
 // polling in più allunga la coda in cui finiscono anche i salvataggi.
+// Il polling serve solo mentre si vende (il telefono manda le scansioni).
+// Dopo un po' di inattività si sospende: 12 richieste/minuto per ore sono
+// migliaia di esecuzioni inutili sul progetto Apps Script.
+const POLL_PAUSA_MS = 20 * 60 * 1000;   // 20 minuti
+let _ultimaAttivita = Date.now();
+
+function segnalaAttivita() {
+  const eraSospeso = (Date.now() - _ultimaAttivita) > POLL_PAUSA_MS;
+  _ultimaAttivita = Date.now();
+  if (eraSospeso) aggiornaStatoPolling();
+}
+
+function pollingSospeso() {
+  return (Date.now() - _ultimaAttivita) > POLL_PAUSA_MS;
+}
+
+function aggiornaStatoPolling() {
+  const el = document.getElementById('statoPolling');
+  if (!el) return;
+  if (pollingSospeso()) {
+    el.innerHTML = '⏸ In attesa — <a href="#" onclick="segnalaAttivita();return false;" ' +
+                   'style="color:var(--c4);">riattiva</a>';
+    el.style.display = 'block';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
 function avviaPolling() {
+  // Qualunque interazione conta come "sono qui".
+  ['click', 'keydown', 'touchstart'].forEach(ev =>
+    document.addEventListener(ev, segnalaAttivita, { passive: true }));
+
   async function tick() {
-    // Tab in secondo piano: niente polling. Una tab dimenticata aperta in
-    // negozio occupava la coda tutto il giorno per nulla.
-    if (!pollingAttivo || document.hidden) {
+    // Tab in secondo piano o nessuna attività da 20 minuti: niente polling.
+    // Una tab dimenticata aperta in negozio occupava la coda tutto il giorno.
+    if (!pollingAttivo || document.hidden || pollingSospeso()) {
+      aggiornaStatoPolling();
       setTimeout(tick, CONFIG.POLLING_INTERVAL);
       return;
     }
@@ -222,21 +335,72 @@ function chiudiRiepilogo() {
 // INVENTARIO
 // ============================================
 async function caricaInventario() {
-  prodottiCache = await getProdottiCached();
+  const grid = document.getElementById('gridProdotti');
 
-  // Popola categorie
-  const categorie = [...new Set(prodottiCache.map(p => p.Categoria).filter(Boolean))];
+  // 1. Quello che c'è già, immediatamente: l'inventario è utilizzabile
+  //    prima che il server risponda (e anche se non risponde).
+  const subito = prodottiSubito();
+  if (subito) {
+    prodottiCache = subito.prodotti;
+    popolaFiltriInventario();
+    filtraInventario();
+    if (!subito.fresco) statoDati('Dati di ' + quantoFa(subito.ts) + ' · aggiornamento...');
+  } else {
+    grid.innerHTML = '<div style="color:var(--c3); font-size:13px;">Caricamento...</div>';
+  }
+
+  // 2. Aggiornamento dal foglio. Se ci sono già dati a schermo l'errore non
+  //    è bloccante: si continua a lavorare su quelli.
+  try {
+    prodottiCache = await getProdottiCached(true, (fatti, tot) => {
+      if (tot) statoDati('Aggiornamento ' + fatti + '/' + tot + '...');
+    });
+    popolaFiltriInventario();
+    filtraInventario();
+    statoDati('');
+  } catch (e) {
+    if (subito) {
+      statoDati('⚠️ Aggiornamento non riuscito — dati di ' + quantoFa(subito.ts) +
+                ' <button onclick="caricaInventario()" class="btn btn-ghost" ' +
+                'style="padding:4px 12px; font-size:12px; margin-left:8px;">Riprova</button>');
+    } else {
+      // Nessun dato di riserva: qui l'errore va detto e basta.
+      prodottiCache = [];
+      grid.innerHTML = `
+        <div style="color:var(--c3); font-size:13px; line-height:1.6;">
+          ⚠️ Caricamento non riuscito (il server non ha risposto).
+          <button onclick="caricaInventario()" style="
+            margin-top:10px; display:block; padding:8px 16px;
+            border:1px solid rgba(91,135,160,0.3); background:white;
+            color:#5b87a0; border-radius:10px; cursor:pointer; font-size:13px;
+          ">Riprova</button>
+        </div>`;
+    }
+  }
+}
+
+function popolaFiltriInventario() {
+  const categorie = [...new Set(prodottiCache.map(p => p.Categoria).filter(Boolean))].sort();
   const selCat = document.getElementById('filtroCategoria');
+  const catSel = selCat.value;   // non perdere il filtro attivo
   selCat.innerHTML = '<option value="">Tutte le categorie</option>';
   categorie.forEach(c => selCat.innerHTML += `<option value="${c}">${c}</option>`);
+  selCat.value = catSel;
 
-  // Popola brand
   const brand = [...new Set(prodottiCache.map(p => p.Brand).filter(Boolean))].sort();
   const selBrand = document.getElementById('filtroBrand');
+  const brSel = selBrand.value;
   selBrand.innerHTML = '<option value="">Tutti i brand</option>';
   brand.forEach(b => selBrand.innerHTML += `<option value="${b}">${b}</option>`);
+  selBrand.value = brSel;
+}
 
-  renderProdotti(prodottiCache);
+// Riga di stato sopra l'inventario: età dei dati, avanzamento, errori.
+function statoDati(html) {
+  const el = document.getElementById('statoDati');
+  if (!el) return;
+  el.innerHTML = html || '';
+  el.style.display = html ? 'block' : 'none';
 }
 
 function str(v) { return v == null ? '' : String(v).toLowerCase(); }
@@ -864,20 +1028,33 @@ function formattaData(iso) {
   return `${parseInt(g)} ${mesi[parseInt(m) - 1] || ''} ${a}`;
 }
 
+// I dati arrivano dal server già ordinati dal più recente: non serve
+// invertirli (getPagina legge il foglio dal fondo).
+function preparaEtichette(raw) {
+  etichetteCache = raw.slice();
+  _ultimaData = etichetteCache
+    .map(dataCarico).filter(Boolean)
+    .sort().pop() || '';
+}
+
 async function caricaEtichette() {
   const el = document.getElementById('listaEtichette');
-  el.innerHTML = '<div style="color:var(--c3); font-size:13px;">Caricamento...</div>';
+
+  // Quello che c'è già, subito: le etichette si stampano senza attendere.
+  const subito = prodottiSubito();
+  if (subito) {
+    preparaEtichette(subito.prodotti);
+    filtraEtichette();
+  } else {
+    el.innerHTML = '<div style="color:var(--c3); font-size:13px;">Caricamento...</div>';
+  }
+
   try {
-    const raw = await getProdottiCached();
-    etichetteCache = [...raw].reverse(); // ultimo inserito prima
-
-    // Data di carico più recente presente nei dati.
-    _ultimaData = etichetteCache
-      .map(dataCarico).filter(Boolean)
-      .sort().pop() || '';
-
+    const raw = await getProdottiCached(true);
+    preparaEtichette(raw);
     filtraEtichette();
   } catch (e) {
+    if (subito) return;   // si continua con i dati mostrati
     // Senza questo catch l'errore restava silenzioso: la pagina mostrava
     // "Caricamento..." per sempre e i filtri lavoravano su una lista vuota,
     // rispondendo "Nessun prodotto trovato".

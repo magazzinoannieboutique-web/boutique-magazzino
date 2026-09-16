@@ -716,3 +716,21 @@ tr:hover td { background: rgba(91,135,160,0.04); }
 .ne-nome { font-size: 13px; font-weight: 500; color: var(--c6); }
 .ne-sub  { font-size: 12px; font-weight: 500; color: var(--c3); margin-top: 3px; }
 .ne-sku  { font-family: monospace; font-size: 11px; color: var(--c3); flex-shrink: 0; }
+
+/* ===== STATO DATI / POLLING ===== */
+/* Età dei dati mostrati e avanzamento dell'aggiornamento: l'app resta
+   utilizzabile durante il caricamento, quindi va detto cosa sta facendo. */
+.stato-dati {
+  font-size: 12px; color: var(--c4);
+  background: rgba(91,135,160,0.08);
+  border: 1px solid rgba(91,135,160,0.18);
+  border-radius: 12px;
+  padding: 8px 14px;
+  margin-bottom: 14px;
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
+}
+/* Polling sospeso per inattività. */
+.stato-polling {
+  font-size: 11px; color: var(--c3);
+  white-space: nowrap;
+}

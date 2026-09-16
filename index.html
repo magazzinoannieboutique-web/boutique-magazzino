@@ -76,6 +76,7 @@
       <a href="#" data-section="etichette">🏷️ <span>Etichette</span></a>
       <a href="#" data-section="storico">📋 <span>Storico</span></a>
     </nav>
+    <div id="statoPolling" class="stato-polling" style="display:none;"></div>
   </header>
 
   <!-- Content card principale -->
@@ -114,6 +115,7 @@
           <button class="btn btn-ghost" id="btnMostraEsauriti" onclick="toggleEsauriti()">👻 Esauriti</button>
           <button class="btn btn-ghost" id="btnModalitaSaldi" onclick="toggleSaldi()">🏷 Saldi</button>
         </div>
+        <div id="statoDati" class="stato-dati" style="display:none;"></div>
         <div class="card-grid" id="gridProdotti">
       </section>
 
@@ -320,10 +322,49 @@
   // ============================================
   let ssData = { ssCategoria: [], ssBrand: [] };
 
+  // Le opzioni vengono ricordate nel browser: Apps Script fallisce spesso
+  // (404 intermittenti), e senza memoria locale i suggerimenti restavano
+  // vuoti a ogni ricaricamento, in silenzio.
+  const SS_CACHE_KEY = 'annie_opzioni_v1';
+
+  function leggiOpzioniLocali() {
+    try {
+      const raw = localStorage.getItem(SS_CACHE_KEY);
+      if (!raw) return null;
+      const d = JSON.parse(raw);
+      return (Array.isArray(d.categorie) && Array.isArray(d.brand)) ? d : null;
+    } catch (e) { return null; }   // storage negato o dato corrotto
+  }
+
+  function salvaOpzioniLocali(categorie, brand) {
+    try {
+      localStorage.setItem(SS_CACHE_KEY, JSON.stringify({ categorie, brand }));
+    } catch (e) { /* spazio pieno o storage negato: non è critico */ }
+  }
+
   async function inizializzaSmartSelects() {
-    const data = await fetch(CONFIG.APPS_SCRIPT_URL + '?action=getOpzioni').then(r => r.json());
-    ssData.ssCategoria = data.categorie || [];
-    ssData.ssBrand     = data.brand     || [];
+    // 1. Subito quelle ricordate: i suggerimenti funzionano da ora.
+    const locali = leggiOpzioniLocali();
+    if (locali) {
+      ssData.ssCategoria = locali.categorie;
+      ssData.ssBrand     = locali.brand;
+    }
+
+    // 2. Poi si aggiorna dal foglio, con il retry di api().
+    try {
+      const data = await api({ action: 'getOpzioni' });
+      if (data && (Array.isArray(data.categorie) || Array.isArray(data.brand))) {
+        ssData.ssCategoria = data.categorie || [];
+        ssData.ssBrand     = data.brand     || [];
+        salvaOpzioniLocali(ssData.ssCategoria, ssData.ssBrand);
+      }
+    } catch (e) {
+      // Nessun dato dal server: si continua con quelli ricordati.
+      // Senza cache locale i menu restano vuoti, e va detto.
+      if (!locali) {
+        console.warn('Opzioni non caricate:', e && e.message);
+      }
+    }
   }
   inizializzaSmartSelects();
 
@@ -368,15 +409,18 @@
     document.getElementById(inputId).value = valore;
     document.getElementById(ssId + '-dropdown').style.display = 'none';
 
-    // Salva nel foglio
-    await fetch(CONFIG.APPS_SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'addOpzione', tipo, valore })
-    });
-
-    // Aggiorna cache locale
+    // In memoria subito: il valore è già nel campo, deve comparire tra i
+    // suggerimenti anche se il salvataggio sul foglio tarda o fallisce.
     if (ssId === 'ssCategoria') ssData.ssCategoria.push(valore);
     else                        ssData.ssBrand.push(valore);
+    salvaOpzioniLocali(ssData.ssCategoria, ssData.ssBrand);
+
+    try {
+      await api({ action: 'addOpzione', tipo, valore });
+    } catch (e) {
+      // Resta nei suggerimenti locali; verrà ricreata al prossimo
+      // salvataggio del capo, perché addOpzione ignora i duplicati.
+    }
   }
 
   function chiudiSmartSelect(ssId) {
