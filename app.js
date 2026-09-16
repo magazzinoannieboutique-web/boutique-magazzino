@@ -197,9 +197,26 @@ function quantoFa(ts) {
 }
 
 // Da chiamare dopo ogni scrittura, così la prossima lettura è fresca.
+// Svuota ANCHE la memoria del browser: senza, dopo un salvataggio le
+// sezioni ripescavano da localStorage i dati di prima e i capi appena
+// creati risultavano invisibili.
 function invalidaCacheProdotti() {
   _cacheProdotti = null;
   _cacheTs = 0;
+  try { localStorage.removeItem(LS_PRODOTTI); } catch (e) {}
+}
+
+// Aggiunge al volo i capi appena creati ai dati già in memoria, così
+// compaiono subito anche se l'aggiornamento dal foglio fallisce.
+function aggiungiAllaCache(nuovi) {
+  if (!nuovi || !nuovi.length) return;
+  const base = _cacheProdotti || (leggiProdottiLocali() || {}).prodotti || null;
+  if (!base) return;   // niente in memoria: il prossimo caricamento prende tutto
+  const noti = new Set(base.map(p => p.SKU));
+  const daAggiungere = nuovi.filter(p => !noti.has(p.SKU));
+  _cacheProdotti = daAggiungere.concat(base);   // i nuovi per primi
+  _cacheTs = Date.now();
+  salvaProdottiLocali(_cacheProdotti);
 }
 
 // ============================================
@@ -941,7 +958,18 @@ async function salvaProdotto() {
 
   if (!creati.length) return;
 
-  invalidaCacheProdotti();  // la lista in cache è superata
+  // I capi nuovi entrano subito nella lista in memoria: così appaiono in
+  // inventario ed etichette anche se il ricarico dal foglio fallisce.
+  // La data serve al raggruppamento "ultimo carico" delle etichette.
+  const oggiIso = new Date().toISOString().substring(0, 10);
+  aggiungiAllaCache(creati.map(c => ({
+    SKU: c.SKU, Nome: c.Nome, Taglia: c.Taglia, Colore: c.Colore,
+    Brand: c.Brand, Categoria: datiBase.Categoria,
+    Prezzo: c.Prezzo, PrezzoAcquisto: parseFloat(prezzoAcquistoStr) || 0,
+    PrezzoSaldo: prezzoSaldo, 'Quantità': c['Quantità'],
+    Speciale: datiBase.Speciale, Stagione: datiBase.Stagione,
+    Note: datiBase.Note, Data: oggiIso, Attivo: 'SI',
+  })));
 
   const box = document.getElementById('skuGenerato');
   box.innerHTML = `✅ ${creati.length > 1 ? creati.length + ' capi salvati' : 'Capo salvato'}: <strong>${creati.map(c => c.SKU).join(', ')}</strong>`;
@@ -1077,7 +1105,18 @@ async function caricaEtichette() {
     preparaEtichette(raw);
     filtraEtichette();
   } catch (e) {
-    if (subito) return;   // si continua con i dati mostrati
+    if (subito) {
+      // Non restare in silenzio: senza avviso si crede che i capi appena
+      // caricati non esistano, quando in realtà i dati sono solo vecchi.
+      const info = document.getElementById('etichetteInfo');
+      if (info) {
+        info.insertAdjacentHTML('beforeend',
+          ' <span style="color:#b5451b;">⚠️ non aggiornato (' + quantoFa(subito.ts) + ')' +
+          ' <button class="btn btn-ghost" style="padding:4px 12px; font-size:12px;"' +
+          ' onclick="caricaEtichette()">Riprova</button></span>');
+      }
+      return;
+    }
     // Senza questo catch l'errore restava silenzioso: la pagina mostrava
     // "Caricamento..." per sempre e i filtri lavoravano su una lista vuota,
     // rispondendo "Nessun prodotto trovato".
