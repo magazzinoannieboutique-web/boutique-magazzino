@@ -736,7 +736,9 @@ function aggiungiVariante(btn) {
     return;
   }
 
-  riga.insertAdjacentHTML('afterend', rigaVariante('', colore.value, 1));
+  // Riga nuova completamente vuota: un colore precompilato si legge come
+  // già inserito e si finisce per salvare varianti con il colore sbagliato.
+  riga.insertAdjacentHTML('afterend', rigaVariante());
   aggiornaStatoVarianti();
   const nuova = riga.nextElementSibling;
   if (nuova) nuova.querySelector('.var-taglia').focus();
@@ -764,14 +766,29 @@ function aggiornaStatoVarianti() {
   });
 }
 
-// Legge le righe compilate. Una riga conta se ha taglia O colore: un capo
-// senza varianti (taglia unica, colore non rilevante) resta valido.
+// Legge le righe del form, scartando quelle senza né taglia né colore:
+// una riga lasciata vuota per sbaglio creava un capo fantasma.
+// Eccezione: se TUTTE le righe sono vuote resta una variante sola, perché
+// un capo può legittimamente non avere taglia né colore (es. taglia unica).
 function leggiVarianti() {
-  return [...document.querySelectorAll('#varianti .var-row')].map(r => ({
+  const righe = [...document.querySelectorAll('#varianti .var-row')].map(r => ({
     Taglia:   r.querySelector('.var-taglia').value.trim().toUpperCase(),
     Colore:   r.querySelector('.var-colore').value.trim(),
     Quantita: Math.max(1, parseInt(r.querySelector('.var-qta').value) || 1),
   }));
+
+  const compilate = righe.filter(v => v.Taglia || v.Colore);
+  return compilate.length ? compilate : righe.slice(0, 1);
+}
+
+// Quante righe sono state ignorate: serve per avvisare invece di scartarle
+// in silenzio (potrebbe essere una taglia dimenticata, non uno sbaglio).
+function varianteVuoteIgnorate() {
+  const righe = [...document.querySelectorAll('#varianti .var-row')];
+  if (righe.length <= 1) return 0;
+  return righe.filter(r =>
+    !r.querySelector('.var-taglia').value.trim() &&
+    !r.querySelector('.var-colore').value.trim()).length;
 }
 
 async function salvaProdotto() {
@@ -803,6 +820,12 @@ async function salvaProdotto() {
   };
 
   const varianti = leggiVarianti();
+
+  // Righe vuote scartate: va detto, potrebbe essere una taglia dimenticata.
+  const ignorate = varianteVuoteIgnorate();
+  if (ignorate > 0) {
+    showToast(`ℹ️ ${ignorate} riga/righe vuota/e ignorata/e`, '');
+  }
 
   // Due righe con la stessa taglia E lo stesso colore sarebbero due capi
   // identici: quasi sempre un errore di battitura, non un'intenzione.
