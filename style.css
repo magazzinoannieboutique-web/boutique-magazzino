@@ -765,7 +765,14 @@ tr:hover td { background: rgba(91,135,160,0.04); }
 .btn-aggiorna.in-corso .agg-icona { animation: ruota 0.9s linear infinite; }
 @keyframes ruota { to { transform: rotate(360deg); } }
 
+/* Stato predefinito piu marcato: senza, nei primi minuti il bottone
+   si confondeva con lo sfondo e sembrava disattivato. */
+.btn-aggiorna.agg-ok {
+  background: rgba(91,135,160,0.14);
+  border-color: rgba(91,135,160,0.3);
+  color: var(--c5);
+}
+
 @media (max-width: 720px) {
-  .btn-aggiorna { padding: 7px 9px; }
-  .agg-eta { display: none; }   /* su telefono resta la sola icona */
+  .btn-aggiorna { padding: 7px 10px; font-size: 11px; }
 }

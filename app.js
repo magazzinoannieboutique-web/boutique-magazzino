@@ -241,12 +241,20 @@ async function aggiornaTutto() {
   _aggiornamentoFallito = false;
   aggiornaIndicatore();
 
-  invalidaCacheProdotti();   // scarta sessione e memoria del browser
   try {
     const sez = sezioneAttiva();
-    if (sez === 'etichette')      await caricaEtichette();
-    else if (sez === 'storico')   await caricaStorico();
-    else                          await caricaInventario();
+    if (sez === 'etichette') {
+      // Le etichette non usano la cache: chiedono l'ultimo lotto al server,
+      // una richiesta sola. Svuotarla qui costringerebbe l'inventario a
+      // riscaricare 1500 capi al prossimo accesso, per niente.
+      await caricaEtichette();
+    } else if (sez === 'storico') {
+      invalidaCacheProdotti();
+      await caricaStorico();
+    } else {
+      invalidaCacheProdotti();
+      await caricaInventario();
+    }
     // caricaX segnala da sé l'esito tramite segnaAggiornamento().
   } catch (e) {
     _aggiornamentoFallito = true;
@@ -271,21 +279,31 @@ function aggiornaIndicatore() {
   btn.classList.toggle('in-corso', _aggiornamentoInCorso);
   btn.classList.remove('agg-ok', 'agg-vecchio', 'agg-errore');
 
-  if (_aggiornamentoInCorso) { eta.textContent = ''; btn.title = 'Aggiornamento in corso...'; return; }
+  if (_aggiornamentoInCorso) { eta.textContent = '...'; btn.title = 'Aggiornamento in corso...'; return; }
 
   if (_aggiornamentoFallito) {
     btn.classList.add('agg-errore');
-    eta.textContent = '!';
+    eta.textContent = 'errore';
     btn.title = 'Ultimo aggiornamento non riuscito — premi per riprovare';
     return;
   }
-  if (!_ultimoAggiornamento) { eta.textContent = ''; btn.title = 'Aggiorna i dati'; return; }
+  if (!_ultimoAggiornamento) {
+    eta.textContent = 'aggiorna';
+    btn.title = 'Aggiorna i dati';
+    return;
+  }
 
-  const min = Math.floor((Date.now() - _ultimoAggiornamento) / 60000);
+  // L'ora dell'ultimo aggiornamento è sempre visibile: senza, nei primi
+  // minuti il bottone non diceva nulla e sembrava inerte.
+  const d = new Date(_ultimoAggiornamento);
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  eta.textContent = hh + ':' + mm;
+
   // Oltre 10 minuti i dati meritano un richiamo visivo: in negozio si vende
   // dal telefono e l'inventario a schermo diventa obsoleto in fretta.
+  const min = Math.floor((Date.now() - _ultimoAggiornamento) / 60000);
   btn.classList.add(min >= 10 ? 'agg-vecchio' : 'agg-ok');
-  eta.textContent = min < 1 ? '' : (min < 60 ? min + 'm' : Math.floor(min / 60) + 'h');
   btn.title = 'Dati di ' + quantoFa(_ultimoAggiornamento) + ' — premi per aggiornare';
 }
 
@@ -1143,6 +1161,7 @@ let etichetteCache = [];
 // foglio (non "oggi": se carichi lunedì e stampi martedì, li ritrovi).
 let _soloUltimoLotto = true;
 let _ultimaData      = '';
+let _totaleFoglio    = 0;   // capi nel foglio, anche quelli non scaricati
 
 function dataCarico(p) {
   return String(p.Data || '').substring(0, 10);
@@ -1164,16 +1183,80 @@ function preparaEtichette(raw) {
     .sort().pop() || '';
 }
 
+// Le etichette caricano SOLO l'ultimo lotto: una richiesta invece di otto.
+// Scaricare 1500 capi per stamparne 10 costava decine di secondi, perché
+// ogni richiesta ad Apps Script può metterci 2 o 30 secondi a caso.
+// L'elenco completo si scarica solo se serve davvero (ricerca o "Mostra tutti").
+let _etichetteComplete = false;   // true quando si hanno tutti i capi
+
 async function caricaEtichette() {
   const el = document.getElementById('listaEtichette');
+  el.innerHTML = '<div style="color:var(--c3); font-size:13px;">Caricamento ultimo lotto...</div>';
+  _etichetteComplete = false;
+  _soloUltimoLotto = true;
 
-  // Quello che c'è già, subito: le etichette si stampano senza attendere.
+  try {
+    const r = await api({ action: 'getUltimoLotto' });
+    if (!r || !Array.isArray(r.prodotti)) throw new Error(r && r.error || 'Risposta non valida');
+    etichetteCache = r.prodotti;
+    _ultimaData    = r.data || '';
+    _totaleFoglio  = r.totale || 0;
+    filtraEtichette();
+    segnaAggiornamento(true);
+    return;
+  } catch (e) {
+    // Il lotto non è arrivato: si ripiega sui dati già noti, se ce ne sono.
+    const subito = prodottiSubito();
+    if (subito) {
+      preparaEtichette(subito.prodotti);
+      _etichetteComplete = true;
+      filtraEtichette();
+      segnaAggiornamento(false);
+      return;
+    }
+    segnaAggiornamento(false);
+    el.innerHTML = `
+      <div style="color:var(--c3); font-size:13px; line-height:1.6;">
+        ⚠️ Caricamento non riuscito (il server non ha risposto).
+        <button onclick="caricaEtichette()" style="
+          margin-top:10px; display:block; padding:8px 16px;
+          border:1px solid rgba(91,135,160,0.3); background:white;
+          color:#5b87a0; border-radius:10px; cursor:pointer; font-size:13px;
+        ">Riprova</button>
+      </div>`;
+    return;
+  }
+}
+
+// Scarica l'elenco completo: serve per cercare fuori dall'ultimo lotto.
+async function caricaTutteLeEtichette() {
+  const el = document.getElementById('listaEtichette');
+  if (_etichetteComplete) return true;
+
+  const prima = el.innerHTML;
+  el.innerHTML = '<div style="color:var(--c3); font-size:13px;">Caricamento di tutti i capi...</div>';
+  try {
+    const raw = await getProdottiCached(true);
+    preparaEtichette(raw);
+    _etichetteComplete = true;
+    filtraEtichette();   // ridisegna: senza, resta il messaggio di attesa
+    segnaAggiornamento(true);
+    return true;
+  } catch (e) {
+    segnaAggiornamento(false);
+    el.innerHTML = prima;
+    showToast('⚠️ Non è stato possibile caricare tutti i capi', 'error');
+    return false;
+  }
+}
+
+// Vecchio percorso, tenuto per il recupero dai dati in memoria.
+async function caricaEtichetteComplete() {
+  const el = document.getElementById('listaEtichette');
   const subito = prodottiSubito();
   if (subito) {
     preparaEtichette(subito.prodotti);
     filtraEtichette();
-  } else {
-    el.innerHTML = '<div style="color:var(--c3); font-size:13px;">Caricamento...</div>';
   }
 
   try {
@@ -1211,6 +1294,20 @@ async function caricaEtichette() {
   }
 }
 
+// Cercare significa voler guardare in tutto il magazzino: se si ha solo
+// l'ultimo lotto, l'elenco completo viene scaricato al primo carattere.
+let _timerRicerca = null;
+function filtraEtichetteDebounce() {
+  clearTimeout(_timerRicerca);
+  _timerRicerca = setTimeout(async () => {
+    const testo = document.getElementById('filtroEtichetta').value.trim();
+    if (testo && !_etichetteComplete) {
+      if (!(await caricaTutteLeEtichette())) return;
+    }
+    filtraEtichette();
+  }, 350);
+}
+
 function filtraEtichette() {
   const testo    = document.getElementById('filtroEtichetta').value.toLowerCase().trim();
   const stagione = document.getElementById('filtroStagioneEtichetta').value;
@@ -1235,9 +1332,12 @@ function aggiornaIntestazioneEtichette(soloLotto, testo) {
 
   if (soloLotto) {
     const n = etichetteCache.filter(p => dataCarico(p) === _ultimaData).length;
+    // Il totale viene dal server: in memoria c'è solo il lotto, quindi
+    // contare etichetteCache darebbe un numero sbagliato.
+    const tot = _totaleFoglio || etichetteCache.length;
     el.innerHTML = `Ultimo carico: <strong>${formattaData(_ultimaData)}</strong> · ${n} capi
       <button class="btn btn-ghost" style="margin-left:10px; padding:5px 14px; font-size:12px;"
-              onclick="mostraTutteEtichette()">Mostra tutti (${etichetteCache.length})</button>`;
+              onclick="mostraTutteEtichette()">Mostra tutti (${tot})</button>`;
   } else if (testo) {
     el.innerHTML = `Ricerca su tutti i ${etichetteCache.length} capi`;
   } else {
@@ -1247,7 +1347,10 @@ function aggiornaIntestazioneEtichette(soloLotto, testo) {
   }
 }
 
-function mostraTutteEtichette() {
+async function mostraTutteEtichette() {
+  // L'elenco completo non è in memoria: va chiesto al server prima di
+  // mostrarlo, altrimenti si vedrebbe solo l'ultimo lotto.
+  if (!_etichetteComplete && !(await caricaTutteLeEtichette())) return;
   _soloUltimoLotto = false;
   filtraEtichette();
 }
@@ -1255,7 +1358,7 @@ function mostraTutteEtichette() {
 function mostraSoloUltimoLotto() {
   _soloUltimoLotto = true;
   document.getElementById('filtroEtichetta').value = '';
-  filtraEtichette();
+  filtraEtichette();   // i dati completi restano in memoria: nessun riscarico
 }
 
 // Rendering a blocchi: 1383 card sono ~24.000 nodi DOM su una pagina alta

@@ -213,7 +213,7 @@
         <h1 class="section-title">Stampa etichette QR</h1>
         <div class="card" style="margin-bottom:18px;">
           <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-            <input class="form-input" style="max-width:220px;" id="filtroEtichetta" placeholder="Cerca per nome, SKU..." oninput="filtraEtichette()">
+            <input class="form-input" style="max-width:220px;" id="filtroEtichetta" placeholder="Cerca per nome, SKU, colore..." oninput="filtraEtichetteDebounce()">
             <select class="form-select" style="max-width:160px;" id="filtroStagioneEtichetta" onchange="filtraEtichette()">
               <option value="">Tutte le stagioni</option>
               <option value="Estate">☀️ Estate</option>
