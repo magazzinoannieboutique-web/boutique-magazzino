@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   caricaDashboard();
   initVarianti();
+  aggiornaIndicatore();
   avviaPolling();
 });
 
@@ -220,6 +221,78 @@ function aggiungiAllaCache(nuovi) {
 }
 
 // ============================================
+// AGGIORNAMENTO MANUALE — bottone 🔄 nella barra.
+// L'indicatore dice sempre quanto sono recenti i dati: prima lo si sapeva
+// solo quando l'aggiornamento falliva, a successo il messaggio spariva.
+// ============================================
+let _ultimoAggiornamento = 0;   // quando i dati sono arrivati dal foglio
+let _aggiornamentoFallito = false;
+let _aggiornamentoInCorso = false;
+
+function sezioneAttiva() {
+  const a = document.querySelector('nav a.active');
+  return a ? a.dataset.section : '';
+}
+
+// Ricarica dal foglio la sezione che si sta guardando.
+async function aggiornaTutto() {
+  if (_aggiornamentoInCorso) return;   // doppio click: una volta sola
+  _aggiornamentoInCorso = true;
+  _aggiornamentoFallito = false;
+  aggiornaIndicatore();
+
+  invalidaCacheProdotti();   // scarta sessione e memoria del browser
+  try {
+    const sez = sezioneAttiva();
+    if (sez === 'etichette')      await caricaEtichette();
+    else if (sez === 'storico')   await caricaStorico();
+    else                          await caricaInventario();
+    // caricaX segnala da sé l'esito tramite segnaAggiornamento().
+  } catch (e) {
+    _aggiornamentoFallito = true;
+  } finally {
+    _aggiornamentoInCorso = false;
+    aggiornaIndicatore();
+  }
+}
+
+// Chiamata dalle sezioni al termine del caricamento.
+function segnaAggiornamento(riuscito) {
+  if (riuscito) { _ultimoAggiornamento = Date.now(); _aggiornamentoFallito = false; }
+  else          { _aggiornamentoFallito = true; }
+  aggiornaIndicatore();
+}
+
+function aggiornaIndicatore() {
+  const btn = document.getElementById('btnAggiorna');
+  const eta = document.getElementById('aggEta');
+  if (!btn || !eta) return;
+
+  btn.classList.toggle('in-corso', _aggiornamentoInCorso);
+  btn.classList.remove('agg-ok', 'agg-vecchio', 'agg-errore');
+
+  if (_aggiornamentoInCorso) { eta.textContent = ''; btn.title = 'Aggiornamento in corso...'; return; }
+
+  if (_aggiornamentoFallito) {
+    btn.classList.add('agg-errore');
+    eta.textContent = '!';
+    btn.title = 'Ultimo aggiornamento non riuscito — premi per riprovare';
+    return;
+  }
+  if (!_ultimoAggiornamento) { eta.textContent = ''; btn.title = 'Aggiorna i dati'; return; }
+
+  const min = Math.floor((Date.now() - _ultimoAggiornamento) / 60000);
+  // Oltre 10 minuti i dati meritano un richiamo visivo: in negozio si vende
+  // dal telefono e l'inventario a schermo diventa obsoleto in fretta.
+  btn.classList.add(min >= 10 ? 'agg-vecchio' : 'agg-ok');
+  eta.textContent = min < 1 ? '' : (min < 60 ? min + 'm' : Math.floor(min / 60) + 'h');
+  btn.title = 'Dati di ' + quantoFa(_ultimoAggiornamento) + ' — premi per aggiornare';
+}
+
+// L'età avanza da sola, senza aspettare un'interazione.
+setInterval(aggiornaIndicatore, 30000);
+
+// ============================================
 // POLLING — silenzioso, non blocca il tab
 // ============================================
 let pollingAttivo = true;
@@ -375,13 +448,16 @@ async function caricaInventario() {
     popolaFiltriInventario();
     filtraInventario();
     statoDati('');
+    segnaAggiornamento(true);
   } catch (e) {
     if (subito) {
       statoDati('⚠️ Aggiornamento non riuscito — dati di ' + quantoFa(subito.ts) +
                 ' <button onclick="caricaInventario()" class="btn btn-ghost" ' +
                 'style="padding:4px 12px; font-size:12px; margin-left:8px;">Riprova</button>');
+      segnaAggiornamento(false);
     } else {
       // Nessun dato di riserva: qui l'errore va detto e basta.
+      segnaAggiornamento(false);
       prodottiCache = [];
       grid.innerHTML = `
         <div style="color:var(--c3); font-size:13px; line-height:1.6;">
@@ -1104,7 +1180,9 @@ async function caricaEtichette() {
     const raw = await getProdottiCached(true);
     preparaEtichette(raw);
     filtraEtichette();
+    segnaAggiornamento(true);
   } catch (e) {
+    segnaAggiornamento(false);
     if (subito) {
       // Non restare in silenzio: senza avviso si crede che i capi appena
       // caricati non esistano, quando in realtà i dati sono solo vecchi.
@@ -1543,21 +1621,36 @@ let _soloSpeciali    = false;
 let _prodottiMap     = {}; // SKU → PrezzoAcquisto
 
 async function caricaStorico() {
-  const [vendite, prodotti] = await Promise.all([
-    api({ action: 'getVendite' }),
-    getProdottiCached()
-  ]);
+  const tbody = document.getElementById('tabellaVendite');
+  try {
+    const [vendite, prodotti] = await Promise.all([
+      api({ action: 'getVendite' }),
+      getProdottiCached()
+    ]);
+    if (!Array.isArray(vendite)) throw new Error('Risposta non valida');
 
-  _venditeCache = vendite;
-  // Mappa SKU → PrezzoAcquisto
-  _prodottiMap = {};
-  prodotti.forEach(p => { _prodottiMap[p.SKU] = parseFloat(p.PrezzoAcquisto || 0); });
+    _venditeCache = vendite;
+    // Mappa SKU → PrezzoAcquisto
+    _prodottiMap = {};
+    prodotti.forEach(p => { _prodottiMap[p.SKU] = parseFloat(p.PrezzoAcquisto || 0); });
 
-  // Incasso totale sempre su tutto
-  const incTot = vendite.reduce((s,v) => s + parseFloat(v.Prezzo||0), 0);
-  document.getElementById('statIncassoTot').textContent = '€ ' + incTot.toFixed(2);
+    // Incasso totale sempre su tutto
+    const incTot = vendite.reduce((s,v) => s + parseFloat(v.Prezzo||0), 0);
+    document.getElementById('statIncassoTot').textContent = '€ ' + incTot.toFixed(2);
 
-  setPeriodo(_periodoCorrente);
+    setPeriodo(_periodoCorrente);
+    segnaAggiornamento(true);
+  } catch (e) {
+    // Senza questo catch lo storico restava su "Caricamento..." per sempre,
+    // come accadeva a inventario ed etichette prima della correzione.
+    segnaAggiornamento(false);
+    if (tbody) {
+      tbody.innerHTML = '<tr><td colspan="7" style="color:var(--c3); text-align:center; padding:24px;">' +
+        '⚠️ Caricamento non riuscito (il server non ha risposto).<br>' +
+        '<button onclick="caricaStorico()" class="btn btn-ghost" ' +
+        'style="margin-top:10px; padding:6px 16px; font-size:13px;">Riprova</button></td></tr>';
+    }
+  }
 }
 
 function setPeriodo(p) {

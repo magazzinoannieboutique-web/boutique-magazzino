@@ -734,3 +734,38 @@ tr:hover td { background: rgba(91,135,160,0.04); }
   font-size: 11px; color: var(--c3);
   white-space: nowrap;
 }
+
+/* ===== BOTTONE AGGIORNA ===== */
+.header-destra { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+.btn-aggiorna {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 7px 12px; border-radius: 999px;
+  border: 1px solid rgba(91,135,160,0.22);
+  background: rgba(91,135,160,0.08);
+  color: var(--c4); cursor: pointer;
+  font-family: var(--font); font-size: 12px; line-height: 1;
+  transition: background 0.18s, border-color 0.18s;
+}
+.btn-aggiorna:hover { background: rgba(91,135,160,0.18); }
+.agg-icona { font-size: 14px; line-height: 1; display: inline-block; }
+.agg-eta { font-weight: 500; letter-spacing: 0.2px; }
+
+/* Dati recenti: nessun richiamo. Oltre 10 minuti diventa ambrato, dopo un
+   errore rosso — in negozio si vende dal telefono e l'inventario invecchia. */
+.btn-aggiorna.agg-vecchio {
+  background: rgba(180,130,30,0.10); color: #8a6020;
+  border-color: rgba(180,130,30,0.28);
+}
+.btn-aggiorna.agg-errore {
+  background: rgba(181,69,27,0.10); color: #b5451b;
+  border-color: rgba(181,69,27,0.3);
+}
+.btn-aggiorna.in-corso { pointer-events: none; opacity: 0.75; }
+.btn-aggiorna.in-corso .agg-icona { animation: ruota 0.9s linear infinite; }
+@keyframes ruota { to { transform: rotate(360deg); } }
+
+@media (max-width: 720px) {
+  .btn-aggiorna { padding: 7px 9px; }
+  .agg-eta { display: none; }   /* su telefono resta la sola icona */
+}

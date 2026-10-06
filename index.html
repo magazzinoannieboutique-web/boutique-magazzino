@@ -76,7 +76,14 @@
       <a href="#" data-section="etichette">🏷️ <span>Etichette</span></a>
       <a href="#" data-section="storico">📋 <span>Storico</span></a>
     </nav>
-    <div id="statoPolling" class="stato-polling" style="display:none;"></div>
+    <div class="header-destra">
+      <div id="statoPolling" class="stato-polling" style="display:none;"></div>
+      <!-- Aggiorna i dati da foglio e mostra quanto sono recenti. -->
+      <button id="btnAggiorna" class="btn-aggiorna" onclick="aggiornaTutto()"
+              title="Aggiorna i dati">
+        <span class="agg-icona">🔄</span><span id="aggEta" class="agg-eta"></span>
+      </button>
+    </div>
   </header>
 
   <!-- Content card principale -->
